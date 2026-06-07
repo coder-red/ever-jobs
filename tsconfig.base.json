@@ -20,6 +20,7 @@
     "resolveJsonModule": true,
     "paths": {
       "@ever-jobs/models": ["packages/models/src/index.ts"],
+      "@ever-jobs/notifier": ["apps/notifier/src/index.ts"],
       "@ever-jobs/common": ["packages/common/src/index.ts"],
       "@ever-jobs/plugin": ["packages/plugin/src/index.ts"],
       "@ever-jobs/plugin-sources": ["packages/plugins/index.ts"],

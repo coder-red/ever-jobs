@@ -5,6 +5,86 @@
 
 ---
 
+## 2026-06-07 — Spec 701 (GHA 24/7 deployment path added)
+
+- **New file** `.github/workflows/notis.yml` — single workflow, runs every 30 min
+  on `ubuntu-latest`, public repo = unlimited minutes. Builds the NestJS API
+  with `npx nest build api`, starts it in the background, polls
+  `http://localhost:3001/health` until ready, then runs `npm run collect`
+  followed by `npm run notis:once`. Stops the API, uploads run logs as an
+  artifact (7-day retention), then commits `collector.json` + `notified.json`
+  + `collect.log` back to a separate `data` branch via the in-repo
+  `GITHUB_TOKEN`.
+- **State persistence** uses an orphan `data` branch. GHA runners are
+  ephemeral, so all `data/*.json` lives in git on that branch and is checked
+  out into `./state/` at the start of every run. Setup steps documented in
+  `apps/notifier/README.md` § "Deployment — GitHub Actions".
+- **New Secrets needed** (Settings → Actions → Secrets):
+  - `TELEGRAM_BOT_TOKEN`
+  - `TELEGRAM_CHAT_ID`
+  Both are read from Secrets, not from `apps/notifier/.env` on the runner.
+- **Concurrency** uses `concurrency: notis` + `cancel-in-progress: false` so
+  overlapping cron runs are queued, not dropped. Notifier dedupe makes
+  re-runs idempotent.
+- **Why not a single-cron on a $5 VPS?** GHA is $0 for a public repo and
+  doesn't need a server to babysit. Trade-off: GHA cron can be 5-15 min late
+  during peaks, and the API-build+start cost adds ~2 min to each cycle.
+- **Updated** `apps/notifier/README.md` § "Deployment — GitHub Actions" with
+  the 4-step setup (Secrets + `data` branch + push workflow + manual
+  workflow_dispatch test).
+
+---
+
+## 2026-06-07 — Spec 701 (Notifier MVP live + two bug fixes)
+
+- **Status:** Spec 701 MVP **live and end-to-end verified** (Telegram delivery
+  confirmed: `[notis] cycle=1 total=2 new=2 sent=2 failed=0 notified_store=2`).
+  Tasks T01-T08 marked `[x]` in `tasks.md`.
+- **Bug fix — `readEnv` ignored inline `#` comments.** When a user copies
+  `.env.example` into `.env`, lines like `TELEGRAM_CHAT_ID=99 # chat id` made the
+  parser set the env var to `99 # chat id`. Two consequences observed in this
+  session: the collector path became invalid (404 / file-not-found) and the
+  Telegram token carried trailing whitespace. Fix in
+  `apps/notifier/src/main.ts`: strip everything from `#` to end-of-line, then
+  unquote wrapped `"…"`/`'…'`. `readEnv` now also accepts an optional
+  `envPath` arg for testability.
+- **Bug fix — `main()` ran on module import.** `main().catch(...)` was at the
+  top level, so any test that imported `main.ts` (to use `readEnv`) silently
+  started `node-cron` and prevented Jest from exiting. Fix: wrap the auto-run
+  in `if (require.main === module)`.
+- **New test file** `apps/notifier/__tests__/env.spec.ts` (6 cases) covers the
+  comment-stripping, quote-stripping, blank-line, defaults, and
+  process-env-takes-precedence paths. Suite total: **28/28 passing**.
+- **Operator notes for the user (recorded here, not just in chat):**
+  - The `data/collector.json` currently holds **2 stale jobs** (CUDA Kernel
+    Optimisation + Healthcare Clinician) that predate the persona-filter
+    tightening. They will re-appear if `data/notified.json` is deleted.
+  - To repopulate against the stricter filter, run `npm run collect` (27
+    remote-board sources, ~2-3 min, expected matches ≈ 0 against the tight
+    persona).
+  - To start the recurring notifier, run `npm run notis` (cron `*/30 * * * *`,
+    1.1 s gap between sends, mutex at `data/notifier.lock`).
+
+---
+
+## 2026-06-07 — Ad-hoc (Spec 701: Job Notis Notifier — Telegram Delivery)
+
+- Created `.specify/specs/701-job-notis-notifier/{spec,plan,tasks}.md`.
+- Scope: plain-TS Telegram notifier for `apps/collector`'s collated junior remote AI roles.
+- Not a plugin (sibling app, no NestJS). Reads `data/collector.json` (read-only); writes
+  `data/notified.json` (its own state). Uses `node-cron` + raw `fetch`; no Telegram SDK,
+  no SQLite.
+- Plan: 3 phases — MVP (T01–T08), hardening (T09–T10), operational (deferred TTL/status).
+- Pairs with `docs/JOB_NOTIS_PLAN.md` (Phase 1 of that plan). `apps/collector` is the
+  existing Phase 0; this spec implements Phase 1.
+- Also in this run: tightened `apps/collector` persona filter (drop CUDA false positive,
+  reject grad roles, require title-level junior signal), added `Cache-Control: no-store`
+  to dashboard `/api/data` (real browser-cache bug), and pruned dead `ai-companies` and
+  `ats-boards` batches (they need company slugs, not blanket `siteType` queries).
+- `docs/index.md` updated with spec 701 row + revised footer.
+
+---
+
 > **Run #100 reminder — Q-042 has been pending review since run #84 (~119 runs / ~119 hours of agent wall-clock). Default C continues; user owner please review at convenience.**
 
 > **Run #150 reminder — Q-042 has been pending review for ~119 runs since run #84. Default C continues; user owner please review at convenience.** (Second-reminder threshold per the run #100 reminder convention; next reminder window opens at run #200.)

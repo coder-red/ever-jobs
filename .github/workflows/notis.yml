@@ -1,0 +1,132 @@
+name: Job Notifier (Telegram)
+
+on:
+  schedule:
+    # Every 30 min. GHA cron is best-effort and can run 5-15 min late during peaks.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:        # manual trigger from the Actions tab
+
+concurrency:
+  group: notis
+  cancel-in-progress: false   # queue overlapping runs; dedupe makes re-runs safe
+
+jobs:
+  collect-and-notify:
+    name: collect (27 sources) + Telegram notify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15       # API build+start ~2 min, collect ~3 min, notify ~30s
+    permissions:
+      contents: write         # required to push back to the `data` branch
+    env:
+      NODE_VERSION: '20'
+    steps:
+      - name: Check out source (develop)
+        uses: actions/checkout@v4
+        with:
+          path: src
+          fetch-depth: 0
+
+      - name: Check out state (data branch)
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: state
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src
+        run: npm ci --no-audit --prefer-offline
+
+      - name: Restore state into data/
+        working-directory: src
+        run: |
+          mkdir -p data
+          for f in collector.json notified.json; do
+            if [ -f "../state/$f" ]; then
+              cp "../state/$f" "data/$f"
+            else
+              echo "::notice::$f missing on data branch; starting empty"
+              printf '{"jobs":{},"runs":[],"next_id":1}\n' > "data/$f"
+            fi
+          done
+
+      - name: Build API (NestJS)
+        working-directory: src
+        run: npx nest build api
+
+      - name: Start API in background
+        working-directory: src
+        id: start-api
+        run: |
+          nohup node dist/apps/api/main.js > api.log 2>&1 &
+          echo $! > api.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/health > /dev/null 2>&1; then
+              echo "API ready after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::API failed to start within 60s"
+          cat api.log
+          exit 1
+
+      - name: Run collector (27 remote boards)
+        working-directory: src
+        env:
+          COLLECTOR_EVER_JOBS_URL: http://localhost:3001
+          COLLECTOR_HOURS_OLD: '48'
+        run: npm run collect 2>&1 | tee data/collect.log || true
+
+      - name: Run notifier (Telegram send)
+        working-directory: src
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTIS_DATA_PATH: ./data/collector.json
+          NOTIS_NOTIFIED_PATH: ./data/notified.json
+        run: npm run notis:once 2>&1 | tee -a data/collect.log
+
+      - name: Stop API
+        if: always()
+        working-directory: src
+        run: |
+          if [ -f api.pid ]; then
+            kill "$(cat api.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload run logs (always, for debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notis-logs-${{ github.run_id }}
+          path: |
+            src/api.log
+            src/data/collect.log
+          retention-days: 7
+
+      - name: Persist state to data branch
+        if: always()
+        working-directory: state
+        run: |
+          set -e
+          cp ../src/data/collector.json ./collector.json
+          cp ../src/data/notified.json ./notified.json
+          [ -f ../src/data/collect.log ] && cp ../src/data/collect.log ./collect.log
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --staged --quiet; then
+            echo 'no state changes to commit'
+          else
+            git commit -m "chore(notis): state $(date -u +%FT%TZ)"
+            git push
+          fi

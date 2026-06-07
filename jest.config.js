@@ -6,6 +6,7 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.e2e-spec.ts', '**/__tests__/**/*.spec.ts'],
   moduleNameMapper: {
     '^@ever-jobs/models$': '<rootDir>/packages/models/src/index.ts',
+    '^@ever-jobs/notifier$': '<rootDir>/apps/notifier/src/index.ts',
     '^@ever-jobs/common$': '<rootDir>/packages/common/src/index.ts',
     '^@ever-jobs/analytics$': '<rootDir>/packages/analytics/src/index.ts',
     '^@ever-jobs/plugin$': '<rootDir>/packages/plugin/src/index.ts',

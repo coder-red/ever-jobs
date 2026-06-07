@@ -1,0 +1,8 @@
+{
+  "name": "@ever-jobs/notifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plain-TS Telegram notifier for collated junior remote AI roles (consumes apps/collector output).",
+  "license": "MIT",
+  "main": "dist/main.js"
+}

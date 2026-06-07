@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Collector</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4d;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #5b9cff;
+      --green: #3dd68c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; }
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .stat { font-size: 0.875rem; color: var(--muted); }
+    .stat strong { color: var(--text); font-size: 1.125rem; display: block; }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    main { padding: 1.5rem 2rem 3rem; max-width: 960px; margin: 0 auto; }
+    .runs {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+    .runs h2 { font-size: 0.875rem; color: var(--text); margin-bottom: 0.5rem; }
+    .run-row { padding: 0.25rem 0; }
+    .jobs { display: grid; gap: 1rem; }
+    .job {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .job h3 { font-size: 1rem; margin-bottom: 0.35rem; }
+    .job h3 a { color: var(--text); text-decoration: none; }
+    .job h3 a:hover { color: var(--accent); }
+    .meta { font-size: 0.8125rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .tag {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: #243044;
+      color: var(--muted);
+    }
+    .tag.remote { background: #1a3d2e; color: var(--green); }
+    .empty {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    .error { color: #ff7b7b; padding: 1rem; }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Junior Remote AI Jobs</h1>
+      <p style="color: var(--muted); font-size: 0.875rem; margin-top: 0.25rem;" id="store-path"></p>
+    </div>
+    <div class="stats">
+      <div class="stat"><strong id="total">—</strong> jobs saved</div>
+    </div>
+    <button type="button" id="refresh">Refresh</button>
+  </header>
+  <main>
+    <div id="error" class="error" hidden></div>
+    <section class="runs" id="runs-panel" hidden>
+      <h2>Recent collects</h2>
+      <div id="runs"></div>
+    </section>
+    <div class="jobs" id="jobs"></div>
+    <div class="empty" id="empty" hidden>
+      <p>No jobs yet.</p>
+      <p style="margin-top: 0.5rem;">Run <code>npm run collect</code> while the API is up.</p>
+    </div>
+  </main>
+  <footer>Auto-refreshes every 30s</footer>
+  <script>
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString();
+    }
+
+    function render(data) {
+      document.getElementById('total').textContent = data.total;
+      document.getElementById('store-path').textContent = data.storePath;
+
+      const runsEl = document.getElementById('runs');
+      const runsPanel = document.getElementById('runs-panel');
+      if (data.runs.length) {
+        runsPanel.hidden = false;
+        runsEl.innerHTML = data.runs.slice(0, 5).map(function (r) {
+          var err = r.error ? ' · error: ' + r.error : '';
+          return '<div class="run-row">' + r.batch + ': fetched ' + r.fetched +
+            ', matched ' + r.matched + ', new ' + r.inserted + err +
+            ' · ' + fmtDate(r.startedAt) + '</div>';
+        }).join('');
+      } else {
+        runsPanel.hidden = true;
+      }
+
+      const jobsEl = document.getElementById('jobs');
+      const emptyEl = document.getElementById('empty');
+      if (!data.jobs.length) {
+        jobsEl.innerHTML = '';
+        emptyEl.hidden = false;
+        return;
+      }
+      emptyEl.hidden = true;
+      jobsEl.innerHTML = data.jobs.map(function (job) {
+        return '<article class="job">' +
+          '<h3><a href="' + job.jobUrl + '" target="_blank" rel="noopener">' + job.title + '</a></h3>' +
+          '<div class="meta">' + (job.company || 'Unknown company') +
+          (job.location ? ' · ' + job.location : '') + '</div>' +
+          '<div class="tags">' +
+          (job.isRemote ? '<span class="tag remote">Remote</span>' : '') +
+          (job.site ? '<span class="tag">' + job.site + '</span>' : '') +
+          (job.datePosted ? '<span class="tag">Posted ' + job.datePosted + '</span>' : '') +
+          '<span class="tag">Seen ' + fmtDate(job.firstSeenAt) + '</span>' +
+          '</div></article>';
+      }).join('');
+    }
+
+    async function load() {
+      document.getElementById('error').hidden = true;
+      try {
+        const res = await fetch('/api/data');
+        if (!res.ok) throw new Error('Failed to load data');
+        render(await res.json());
+      } catch (err) {
+        const el = document.getElementById('error');
+        el.textContent = err.message || String(err);
+        el.hidden = false;
+      }
+    }
+
+    document.getElementById('refresh').addEventListener('click', load);
+    load();
+    setInterval(load, 30000);
+  </script>
+</body>
+</html>
