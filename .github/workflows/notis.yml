@@ -119,7 +119,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          # fresh git init (state/ may have a stale .git from failed checkout)
+          # Fresh init every run (no risk — single-writer, concurrency: notis)
           rm -rf state
           mkdir -p state
           cd state
@@ -137,12 +137,12 @@ jobs:
             || printf '{"urls":{}}\n' > ./notified.json
           [ -f ../src/data/collect.log ] && cp ../src/data/collect.log ./collect.log || true
           
-          # ---- commit & push ----
+          # ---- commit & force-push to refs/heads/data ----
           git add -A
           if git diff --staged --quiet 2>/dev/null; then
             echo 'no state changes to commit'
           else
             git commit -m "chore(notis): state $(date -u +%FT%TZ)"
-            # HEAD:data pushes whatever the local branch is to refs/heads/data
-            git push origin HEAD:data
+            # force: data branch has no meaningful history, single-writer
+            git push --force origin HEAD:data
           fi
