@@ -26,8 +26,9 @@ jobs:
           path: src
           fetch-depth: 0
 
-      - name: Check out state (data branch)
+      - name: Check out state (data branch, optional)
         uses: actions/checkout@v4
+        continue-on-error: true
         with:
           ref: data
           path: state
@@ -115,12 +116,30 @@ jobs:
 
       - name: Persist state to data branch
         if: always()
-        working-directory: state
+        shell: bash
         run: |
           set -e
-          cp ../src/data/collector.json ./collector.json
-          cp ../src/data/notified.json ./notified.json
-          [ -f ../src/data/collect.log ] && cp ../src/data/collect.log ./collect.log
+          mkdir -p state
+          cd state
+          
+          # ---- init data branch if this is the first run ----
+          if [ ! -d .git ]; then
+            echo "::warning::data branch not found on remote; initializing local orphan branch"
+            git init -b data
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git remote add origin \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          fi
+          
+          # ---- copy state files from src/data/ (or seed defaults) ----
+          cp ../src/data/collector.json ./collector.json 2>/dev/null \
+            || printf '{"jobs":{},"runs":[],"next_id":1}\n' > ./collector.json
+          cp ../src/data/notified.json ./notified.json 2>/dev/null \
+            || printf '{"urls":{}}\n' > ./notified.json
+          [ -f ../src/data/collect.log ] && cp ../src/data/collect.log ./collect.log || true
+          
+          # ---- commit & push ----
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
@@ -128,5 +147,5 @@ jobs:
             echo 'no state changes to commit'
           else
             git commit -m "chore(notis): state $(date -u +%FT%TZ)"
-            git push
+            git push origin data
           fi
