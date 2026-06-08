@@ -119,18 +119,16 @@ jobs:
         shell: bash
         run: |
           set -e
+          # fresh git init (state/ may have a stale .git from failed checkout)
+          rm -rf state
           mkdir -p state
           cd state
           
-          # ---- init data branch if this is the first run ----
-          if [ ! -d .git ]; then
-            echo "::warning::data branch not found on remote; initializing local orphan branch"
-            git init -b data
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git remote add origin \
-              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          fi
+          git init -b data
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add origin \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           
           # ---- copy state files from src/data/ (or seed defaults) ----
           cp ../src/data/collector.json ./collector.json 2>/dev/null \
@@ -140,12 +138,11 @@ jobs:
           [ -f ../src/data/collect.log ] && cp ../src/data/collect.log ./collect.log || true
           
           # ---- commit & push ----
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          if git diff --staged --quiet; then
+          if git diff --staged --quiet 2>/dev/null; then
             echo 'no state changes to commit'
           else
             git commit -m "chore(notis): state $(date -u +%FT%TZ)"
-            git push origin data
+            # HEAD:data pushes whatever the local branch is to refs/heads/data
+            git push origin HEAD:data
           fi
