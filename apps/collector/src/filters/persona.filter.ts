@@ -3,7 +3,7 @@ import { JobPostDto, LocationDto } from '@ever-jobs/models';
 const AI_PATTERN =
   /\b(ai|ml|machine learning|llm|nlp|deep learning|data scientist|mle)\b/i;
 const JUNIOR_PATTERN =
-  /\b(junior|entry[- ]?level|associate|intern(ship)?|0-2 years?|0-1 years?|early career)\b/i;
+  /\b(junior|entry[- ]?level|associate|intern(ship)?|co-?op|trainee|apprentice|0-2 years?|0-1 years?|early career)\b/i;
 const GRAD_EXCLUDE_PATTERN =
   /\b(new[- ]?grad(uate)?|grad(uate)? (program|role|engineer|position)|campus|rotation|university|class of \d{4})\b/i;
 const SENIOR_PATTERN =
@@ -81,8 +81,11 @@ export function matchesPersona(
   const titleOnly = job.title;
   const blob = titleBlob(job);
 
-  if (!matchesAiRole(titleOnly) && !matchesAiRole(blob)) return false;
-  if (!matchesJuniorLevel(titleOnly)) return false;
+  const isAiRole = matchesAiRole(titleOnly) || matchesAiRole(blob);
+  if (!isAiRole) return false;
+  // AI/ML roles pass even without junior keyword (most real MLE titles don't say
+  // "junior"). Non-AI roles still need a junior signal.
+  if (!isAiRole && !matchesJuniorLevel(titleOnly) && !matchesJuniorLevel(blob)) return false;
   if (isSeniorRole(titleOnly) || isSeniorRole(blob)) return false;
   if (isGradRole(titleOnly) || isGradRole(blob)) return false;
   if (!isRemoteRole(job, options)) return false;

@@ -104,7 +104,7 @@ export class CollectorService {
           const matchedJobs = allJobs.filter((job: JobPostDto) => {
             if (matchesPersona(job, { allowHybrid })) return true;
             if (rejectSamples.length < 5) {
-              rejectSamples.push(`${job.title} @ ${job.company ?? job.site ?? '?'}`);
+              rejectSamples.push(`${job.title} @ ${job.companyName ?? job.site ?? '?'}`);
             }
             return false;
           });
