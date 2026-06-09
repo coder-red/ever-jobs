@@ -97,12 +97,23 @@ export class CollectorService {
           });
 
           const response = await client.search(input);
-          fetched = response.jobs?.length ?? 0;
+          const allJobs = response.jobs ?? [];
+          fetched = allJobs.length;
 
-          const matchedJobs = (response.jobs ?? []).filter((job: JobPostDto) =>
-            matchesPersona(job, { allowHybrid }),
-          );
+          const rejectSamples: string[] = [];
+          const matchedJobs = allJobs.filter((job: JobPostDto) => {
+            if (matchesPersona(job, { allowHybrid })) return true;
+            if (rejectSamples.length < 5) {
+              rejectSamples.push(`${job.title} @ ${job.company ?? job.site ?? '?'}`);
+            }
+            return false;
+          });
           matched = matchedJobs.length;
+          if (rejectSamples.length > 0) {
+            this.logger.warn(
+              `Rejected (first ${rejectSamples.length}): ${rejectSamples.join(' | ')}`,
+            );
+          }
 
           if (!options?.dryRun && store && matchedJobs.length > 0) {
             const result = store.upsertJobs(matchedJobs);
