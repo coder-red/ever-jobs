@@ -80,11 +80,12 @@ jobs:
           cat api.log
           exit 1
 
-      - name: Run collector (27 remote boards)
+      - name: Run collector (27 remote boards + major boards)
         working-directory: src
         env:
           COLLECTOR_EVER_JOBS_URL: http://localhost:3001
-          COLLECTOR_HOURS_OLD: '48'
+          COLLECTOR_HOURS_OLD: '168'
+          COLLECTOR_SEARCH_TERM: 'AI OR "machine learning" OR LLM OR "deep learning" OR MLE OR "data scientist"'
         run: npm run collect 2>&1 | tee data/collect.log || true
 
       - name: Run notifier (Telegram send)

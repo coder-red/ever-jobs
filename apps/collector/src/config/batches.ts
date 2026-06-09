@@ -24,7 +24,7 @@ export const PAID_SOURCES: readonly Site[] = [
 ];
 
 export const DEFAULT_SEARCH_TERM =
-  'junior AI engineer OR entry level machine learning OR associate ML engineer';
+  'AI OR "machine learning" OR LLM OR "deep learning" OR MLE OR "data scientist"';
 
 export const SOURCE_BATCHES: readonly SourceBatch[] = [
   {
