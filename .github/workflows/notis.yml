@@ -85,7 +85,7 @@ jobs:
         env:
           COLLECTOR_EVER_JOBS_URL: http://localhost:3001
           COLLECTOR_HOURS_OLD: '168'
-          COLLECTOR_SEARCH_TERM: 'AI OR "machine learning" OR LLM OR "deep learning" OR MLE OR "data scientist"'
+          COLLECTOR_SEARCH_TERM: '"AI engineer" OR "ML engineer" OR "AI/ML engineer" OR "machine learning engineer" OR "MLE"'
         run: npm run collect 2>&1 | tee data/collect.log || true
 
       - name: Run notifier (Telegram send)
