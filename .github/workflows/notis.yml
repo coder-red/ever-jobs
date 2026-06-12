@@ -88,6 +88,34 @@ jobs:
           COLLECTOR_SEARCH_TERM: '"AI engineer" OR "ML engineer" OR "AI/ML engineer" OR "machine learning engineer" OR "MLE"'
         run: npm run collect 2>&1 | tee data/collect.log || true
 
+      - name: Run founder scraper (HN Who's Hiring AI/ML posts)
+        working-directory: src
+        run: npm run founder 2>&1 | tee -a data/collect.log
+
+      - name: Merge founder posts into collector
+        working-directory: src
+        run: |
+          if [ -f data/founder_posts.json ]; then
+            node -e "
+              const c = JSON.parse(require('fs').readFileSync('data/collector.json','utf8'));
+              const f = JSON.parse(require('fs').readFileSync('data/founder_posts.json','utf8'));
+              const before = Object.keys(c.jobs).length;
+              let added = 0;
+              for (const [url, job] of Object.entries(f.jobs)) {
+                if (!c.jobs[url]) {
+                  job.id = c.next_id++;
+                  c.jobs[url] = job;
+                  added++;
+                }
+              }
+              c.runs.push(...f.runs);
+              require('fs').writeFileSync('data/collector.json', JSON.stringify(c, null, 2));
+              console.log('[merge] added ' + added + ' founder posts (was ' + before + ', now ' + Object.keys(c.jobs).length + ')');
+            "
+          else
+            echo '[merge] no founder_posts.json to merge'
+          fi
+
       - name: Run notifier (Telegram send)
         working-directory: src
         env:

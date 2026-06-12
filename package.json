@@ -37,6 +37,7 @@
     "bench:oracle": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-ats-oracle/__tests__/oracle.bench.ts",
     "bench:mercor": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-ats-mercor/__tests__/mercor.bench.ts",
     "bench:tesla": "ts-node --project tsconfig.base.json -r tsconfig-paths/register packages/plugins/source-tesla/__tests__/tesla.bench.ts",
+    "founder": "ts-node -P tsconfig.base.json -r tsconfig-paths/register scripts/founder-scraper.ts",
     "bench:ats-batch-2": "npm run bench:oracle && npm run bench:mercor && npm run bench:tesla"
   },
   "dependencies": {
