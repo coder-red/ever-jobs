@@ -19,11 +19,12 @@ function job(overrides: Partial<CollatedJob> = {}): CollatedJob {
 }
 
 describe('formatJob', () => {
-  it('renders title, company, location, link, and source', () => {
+  it('renders title, company, location, score, link, and source', () => {
     const out = formatJob(job());
     expect(out).toContain('<b>Junior AI Engineer</b>');
     expect(out).toContain('@ Acme');
     expect(out).toContain('Remote');
+    expect(out).toContain('🔥 90/100');
     expect(out).toContain('https://example.com/jobs/1');
     expect(out).toContain('via remoteok');
   });
@@ -55,5 +56,23 @@ describe('formatJob', () => {
   it('omits company line when company_name is null', () => {
     const out = formatJob(job({ company_name: null }));
     expect(out).not.toContain('@');
+  });
+
+  it('scores intern roles highest', () => {
+    const out = formatJob(job({ title: 'AI Intern' }));
+    expect(out).toContain('100/100');
+    expect(out).toContain('🔥');
+  });
+
+  it('scores senior roles lowest', () => {
+    const out = formatJob(job({ title: 'Senior Staff ML Engineer' }));
+    expect(out).toContain('30/100');
+    expect(out).toContain('👎');
+  });
+
+  it('scores mid roles in between', () => {
+    const out = formatJob(job({ title: 'Mid-Level AI Engineer' }));
+    expect(out).toContain('70/100');
+    expect(out).toContain('👍');
   });
 });
