@@ -248,11 +248,25 @@ function failingScraper(error = 'Network timeout'): IScraper {
 /**
  * Create a JobsService instance with a custom scraperMap.
  * Bypasses the 182-arg constructor by using Object.create.
+ * @param atsSites  Optional set of sites considered ATS (for searchJobs routing).
  */
-function createService(scraperEntries: [Site, IScraper][]): JobsService {
+function createService(
+  scraperEntries: [Site, IScraper][],
+  atsSites: Set<Site> = new Set(),
+): JobsService {
   const service = Object.create(JobsService.prototype);
   service.logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
   service.scraperMap = new Map<Site, IScraper>(scraperEntries);
+  service.registry = {
+    listSiteKeys: () => Array.from(service.scraperMap.keys()),
+    listAtsSites: () => [...atsSites],
+    getScraper: (site: Site) => service.scraperMap.get(site),
+  };
+  service.configService = { get: jest.fn().mockReturnValue({}) };
+  service.metrics = {
+    scraperDuration: { startTimer: jest.fn().mockReturnValue(jest.fn()) },
+    scraperRequestsTotal: { inc: jest.fn() },
+  };
   return service;
 }
 
@@ -282,10 +296,13 @@ describe('JobsService', () => {
     it('should route to ATS scrapers when companySlug is provided and no explicit sites', async () => {
       const greenhouse = makeScraper([{ title: 'GH job' }]);
       const linkedin = makeScraper([{ title: 'LI job' }]);
-      const service = createService([
-        [Site.GREENHOUSE, greenhouse],
-        [Site.LINKEDIN, linkedin],
-      ]);
+      const service = createService(
+        [
+          [Site.GREENHOUSE, greenhouse],
+          [Site.LINKEDIN, linkedin],
+        ],
+        new Set([Site.GREENHOUSE]),
+      );
 
       const input = new ScraperInputDto({
         searchTerm: 'node',
@@ -304,11 +321,14 @@ describe('JobsService', () => {
       const linkedin = makeScraper([{ title: 'LI job' }]);
       const lever = makeScraper([{ title: 'Lever job' }]);
       const amazon = makeScraper([{ title: 'Amazon job' }]);
-      const service = createService([
-        [Site.LINKEDIN, linkedin],
-        [Site.LEVER, lever],
-        [Site.AMAZON, amazon],
-      ]);
+      const service = createService(
+        [
+          [Site.LINKEDIN, linkedin],
+          [Site.LEVER, lever],
+          [Site.AMAZON, amazon],
+        ],
+        new Set([Site.LEVER]),
+      );
 
       const input = new ScraperInputDto({ searchTerm: 'node', siteType: undefined });
       const result = await service.searchJobs(input);

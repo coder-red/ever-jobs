@@ -1,8 +1,14 @@
 import * as cron from 'node-cron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
 import { runOnce, ConfigError } from './notifier';
 import { RunOnceOptions } from './types';
+
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '';
+if (proxyUrl && proxyUrl.trim()) {
+  setGlobalDispatcher(new ProxyAgent(proxyUrl.trim()));
+}
 
 const LOCK_PATH = path.join(process.cwd(), 'data/notifier.lock');
 

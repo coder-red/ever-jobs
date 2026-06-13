@@ -1,13 +1,19 @@
 import { JobPostDto, LocationDto } from '@ever-jobs/models';
 
 const AI_PATTERN =
-  /\b(ai|ml|machine learning|llm|nlp|deep learning|data scientist|mle)\b/i;
+  /\b(?:ai|machine learning|artificial intelligence)\s+(?:engineer|engineering|engr)\b|\b(?:ml|ai\/ml)\s+(?:engineer|engineering|engr)\b|\bmle\b/i;
 const JUNIOR_PATTERN =
   /\b(junior|entry[- ]?level|associate|intern(ship)?|co-?op|trainee|apprentice|0-2 years?|0-1 years?|early career)\b/i;
 const GRAD_EXCLUDE_PATTERN =
   /\b(new[- ]?grad(uate)?|grad(uate)? (program|role|engineer|position)|campus|rotation|university|class of \d{4})\b/i;
 const SENIOR_PATTERN =
   /\b(senior|staff|principal|lead|manager|director|head of|architect|sr\.|5\+ years?|7\+ years?|10\+ years?)\b/i;
+const SCIENTIST_EXCLUDE =
+  /\b(scientist|research\s+scientist|applied\s+scientist|data\s+scientist|nlp\s+scientist|cv\s+scientist|machine\s+learning\s+scientist|ai\s+scientist|staff\s+scientist|principal\s+scientist|senior\s+scientist|researcher|research\s+engineer|research\s+scientist|applied\s+researcher)\b/i;
+const EXP_RANGE = /\b(\d+)\s*[-–]+\s*\d+\s*(?:years?|yrs?|yr)\b/i;
+const EXP_PLUS = /\b(\d+)\+?\s*(?:years?|yrs?|yr)\s+(?:of\s+)?(?:\S+\s+)?experience\b/i;
+const ZERO_EXP_POSITIVE = /\b(?:0\s+years?|no\s+(?:prior\s+|professional\s+|work\s+)?experience|entry\s*level\s+.*no\s+exp|no\s+experience\s+required|no\s+prior\s+exp)\b/i;
+const PORTFOLIO_ALT = /\b(portfolio|github|side\s+project|equivalent\s+(?:experience|work)|open\s*source)\b/i;
 const REMOTE_POSITIVE =
   /\b(remote|work from home|wfh|anywhere|distributed|worldwide|telecommute)\b/i;
 const REMOTE_NEGATIVE = /\b(on[- ]site|in[- ]office)\b/i;
@@ -72,6 +78,32 @@ export function isRemoteRole(
  *   - Grad signal:   title OR jobLevel (rejects campus / new-grad pipelines)
  *   - Remote signal: isRemote flag, or remote text in title+location, no on-site
  */
+export function isZeroExpFriendly(description?: string | null): boolean {
+  if (!description) return true;
+
+  const desc = description;
+
+  if (ZERO_EXP_POSITIVE.test(desc)) return true;
+
+  const portfolioMentioned = PORTFOLIO_ALT.test(desc);
+
+  const rangeMatch = desc.match(EXP_RANGE);
+  if (rangeMatch) {
+    const minYears = parseInt(rangeMatch[1], 10);
+    if (portfolioMentioned) return true;
+    return minYears < 1;
+  }
+
+  const plusMatch = desc.match(EXP_PLUS);
+  if (plusMatch) {
+    const years = parseInt(plusMatch[1], 10);
+    if (portfolioMentioned) return true;
+    return years < 1;
+  }
+
+  return true;
+}
+
 export function matchesPersona(
   job: JobPostDto,
   options: PersonaFilterOptions = {},
@@ -81,6 +113,9 @@ export function matchesPersona(
   const titleOnly = job.title;
   const blob = titleBlob(job);
 
+  // Reject scientist/researcher titles — only AI/ML Engineer roles
+  if (SCIENTIST_EXCLUDE.test(titleOnly) || SCIENTIST_EXCLUDE.test(blob)) return false;
+
   const isAiRole = matchesAiRole(titleOnly) || matchesAiRole(blob);
   if (!isAiRole) return false;
   // AI/ML roles pass even without junior keyword (most real MLE titles don't say
@@ -89,6 +124,7 @@ export function matchesPersona(
   if (isSeniorRole(titleOnly) || isSeniorRole(blob)) return false;
   if (isGradRole(titleOnly) || isGradRole(blob)) return false;
   if (!isRemoteRole(job, options)) return false;
+  if (!isZeroExpFriendly(job.description)) return false;
 
   return true;
 }

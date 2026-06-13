@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-06-13 v2 — Zero-exp experience filter, LLM zeroExpFriendly, notifier badge
+
+- **Modified** `apps/collector/src/filters/persona.filter.ts` — Added `isZeroExpFriendly()` that scans job descriptions for experience requirements. Rejects jobs requiring 2+ years unless portfolio alternative mentioned. Matches range ("2-4 years") and plus ("2+ years") patterns.
+- **Modified** `apps/collector/src/rankers/llm-ranker.service.ts` — LLM prompt now asks for `zeroExpFriendly` and `experienceRequired` fields. Extended `LlmRankResult` interface.
+- **Modified** `apps/collector/src/collector.service.ts` — Stores `zeroExpFriendly` and `experienceRequired` from ranker into payload_json.
+- **Modified** `apps/notifier/src/format.ts` — New `zeroExpBadge()` helper; shows `🎓 Portfolio/zero-exp OK` or `⚠️ {requirement}` badge in Telegram messages.
+- **Modified** `apps/collector/src/__tests__/persona.filter.spec.ts` — 10 new tests for `isZeroExpFriendly`.
+
+## 2026-06-13 — Social discovery, LLM ranker, stricter persona filter, Wellfound fix
+
+- **New file** `apps/collector/src/rankers/llm-ranker.service.ts` — LLM-based relevance scoring for uncertain jobs (keyword score 40-80), uses OpenRouter free tier `qwen3-235b-a22b:free`
+- **New file** `scripts/social-discovery.ts` — DuckDuckGo search across Twitter/X, Reddit, LinkedIn, HN, Bluesky, Mastodon + web for AI/ML hiring signals and vibe coder gigs. LLM classifies extracts, upserts into collector store.
+- **New file** `scripts/discover-sources.ts` — LLM agent to find missing job sources not in the 1000+ existing plugins. Outputs reviewable report to `data/discovered-sources.json`.
+- **Modified** `apps/collector/src/filters/persona.filter.ts` — Added `SCIENTIST_EXCLUDE` regex to reject Scientist/Researcher titles (only AI/ML Engineer roles pass).
+- **Modified** `packages/plugins/source-wellfound/src/wellfound.service.ts` — Replaced fragile `__NEXT_DATA__` deep-search with Cheerio DOM parsing as primary extraction. Added `__NEXT_DATA__` shape logging for debugging.
+- **Modified** `apps/collector/src/collector.service.ts` — Wired `LlmRankerService` into collect pipeline: ranks matched jobs, stores `llmScore`/`llmReason` in payload_json.
+- **Modified** `apps/notifier/src/format.ts` — Uses LLM score from payload_json when available. Social posts (`site.startsWith("social-")`) get alternate format with platform emoji, author, and vibe-coder badge.
+- **Modified** `apps/collector/src/__tests__/persona.filter.spec.ts` — Updated test to reject Scientist/Trainer roles per stricter filtering.
+
 ## 2026-06-07 — Spec 701 (GHA 24/7 deployment path added)
 
 - **New file** `.github/workflows/notis.yml` — single workflow, runs every 30 min

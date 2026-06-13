@@ -4,6 +4,7 @@ import { CollectorService } from './collector.service';
 import { CollectCommand } from './commands/collect.command';
 import { ListCommand } from './commands/list.command';
 import { ServeCommand } from './commands/serve.command';
+import { LlmRankerService } from './rankers/llm-ranker.service';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { ServeCommand } from './commands/serve.command';
       envFilePath: ['.env', '../../.env'],
     }),
   ],
-  providers: [CollectorService, CollectCommand, ListCommand, ServeCommand],
+  providers: [CollectorService, LlmRankerService, CollectCommand, ListCommand, ServeCommand],
 })
 export class CollectorModule {}

@@ -8,7 +8,15 @@ import {
   SourceBatch,
 } from './config/batches';
 import { matchesPersona } from './filters/persona.filter';
+import { LlmRankerService } from './rankers/llm-ranker.service';
 import { CollatedJobsStore, CollatedJobRow } from './store/collated-jobs.store';
+
+function isWithinHoursOld(datePosted: string | undefined | null, hoursOld: number): boolean {
+  if (!datePosted) return false;
+  const posted = new Date(datePosted).getTime();
+  if (isNaN(posted)) return false;
+  return Date.now() - posted <= hoursOld * 60 * 60 * 1000;
+}
 
 export interface CollectSummary {
   batches: Array<{
@@ -29,7 +37,10 @@ export interface CollectSummary {
 export class CollectorService {
   private readonly logger = new Logger(CollectorService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly llmRanker: LlmRankerService,
+  ) {}
 
   async collect(options?: {
     batch?: string;
@@ -48,7 +59,7 @@ export class CollectorService {
       'COLLECTOR_SEARCH_TERM',
       DEFAULT_SEARCH_TERM,
     );
-    const hoursOld = Number(this.config.get('COLLECTOR_HOURS_OLD', 48));
+    const hoursOld = Number(this.config.get('COLLECTOR_HOURS_OLD', 72));
     const resultsWanted = Number(this.config.get('COLLECTOR_RESULTS_WANTED', 100));
     const allowHybrid =
       this.config.get<string>('COLLECTOR_ALLOW_HYBRID', 'false') === 'true';
@@ -102,6 +113,8 @@ export class CollectorService {
 
           const rejectSamples: string[] = [];
           const matchedJobs = allJobs.filter((job: JobPostDto) => {
+            const dateStr = job.datePosted instanceof Date ? job.datePosted.toISOString() : job.datePosted;
+            if (!isWithinHoursOld(dateStr, hoursOld)) return false;
             if (matchesPersona(job, { allowHybrid })) return true;
             if (rejectSamples.length < 5) {
               rejectSamples.push(`${job.title} @ ${job.companyName ?? job.site ?? '?'}`);
@@ -115,8 +128,29 @@ export class CollectorService {
             );
           }
 
-          if (!options?.dryRun && store && matchedJobs.length > 0) {
-            const result = store.upsertJobs(matchedJobs);
+          const rankedJobs: JobPostDto[] = [];
+          for (const job of matchedJobs) {
+            try {
+              const result = await this.llmRanker.rank(job.title, job.description);
+              (job as any).llmScore = result.score;
+              (job as any).llmReason = result.reason;
+              (job as any).llmSource = result.source;
+              if (result.zeroExpFriendly !== undefined) {
+                (job as any).zeroExpFriendly = result.zeroExpFriendly;
+              }
+              if (result.experienceRequired !== undefined) {
+                (job as any).experienceRequired = result.experienceRequired;
+              }
+            } catch {
+              (job as any).llmScore = 60;
+              (job as any).llmReason = 'ranking failed';
+              (job as any).llmSource = 'error';
+            }
+            rankedJobs.push(job);
+          }
+
+          if (!options?.dryRun && store && rankedJobs.length > 0) {
+            const result = store.upsertJobs(rankedJobs);
             inserted = result.inserted;
             updated = result.updated;
           }

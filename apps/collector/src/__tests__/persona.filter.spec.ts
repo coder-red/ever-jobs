@@ -3,6 +3,7 @@ import {
   isGradRole,
   isRemoteRole,
   isSeniorRole,
+  isZeroExpFriendly,
   matchesAiRole,
   matchesJuniorLevel,
   matchesPersona,
@@ -94,11 +95,99 @@ describe('persona.filter', () => {
     ).toBe(false);
   });
 
-  it('accepts AI Trainer role if title has explicit junior signal', () => {
+  it('rejects AI Trainer / Scientist / Researcher roles', () => {
     expect(
       matchesPersona(
         baseJob({ title: 'Junior AI Trainer' }),
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      matchesPersona(
+        baseJob({ title: 'AI Research Scientist' }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesPersona(
+        baseJob({ title: 'Applied Scientist' }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesPersona(
+        baseJob({ title: 'Data Scientist' }),
+      ),
+    ).toBe(false);
+  });
+
+  describe('isZeroExpFriendly', () => {
+    it('passes null/empty description', () => {
+      expect(isZeroExpFriendly(null)).toBe(true);
+      expect(isZeroExpFriendly(undefined)).toBe(true);
+      expect(isZeroExpFriendly('')).toBe(true);
+    });
+
+    it('rejects 2+ years experience requirement', () => {
+      expect(isZeroExpFriendly('Requires 2+ years of experience in ML')).toBe(false);
+      expect(isZeroExpFriendly('Must have 3 years experience with Python')).toBe(false);
+      expect(isZeroExpFriendly('5+ years professional experience required')).toBe(false);
+    });
+
+    it('rejects 1+ year without portfolio alternative', () => {
+      expect(isZeroExpFriendly('1+ year of experience with AI frameworks')).toBe(false);
+      expect(isZeroExpFriendly('At least 1 year experience in software engineering')).toBe(false);
+    });
+
+    it('passes 1+ year with portfolio alternative', () => {
+      expect(
+        isZeroExpFriendly('1+ year experience or strong GitHub portfolio'),
+      ).toBe(true);
+      expect(
+        isZeroExpFriendly('Requires 2+ years experience or equivalent open source contributions'),
+      ).toBe(true);
+    });
+
+    it('passes on zero-exp positive signals', () => {
+      expect(isZeroExpFriendly('No experience required. Training provided.')).toBe(true);
+      expect(isZeroExpFriendly('No prior experience needed. We train.')).toBe(true);
+      expect(isZeroExpFriendly('0 years of experience required')).toBe(true);
+    });
+
+    it('rejects experience ranges >= 2', () => {
+      expect(isZeroExpFriendly('2-4 years of experience in ML')).toBe(false);
+      expect(isZeroExpFriendly('3-5 years Python experience')).toBe(false);
+    });
+
+    it('passes range 0-1 years', () => {
+      expect(isZeroExpFriendly('0-1 years experience, training provided')).toBe(true);
+    });
+
+    it('rejects jobs with 2+ years via matchesPersona', () => {
+      expect(
+        matchesPersona(
+          baseJob({
+            title: 'Junior AI Engineer',
+            description: 'Requires 2+ years of ML experience',
+          }),
+        ),
+      ).toBe(false);
+    });
+
+    it('passes jobs with portfolio alternative via matchesPersona', () => {
+      expect(
+        matchesPersona(
+          baseJob({
+            title: 'AI Engineer',
+            description: '1+ year experience or GitHub portfolio accepted',
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('passes jobs with no description at all', () => {
+      expect(
+        matchesPersona(
+          baseJob({ title: 'Junior AI Engineer' }),
+        ),
+      ).toBe(true);
+    });
   });
 });

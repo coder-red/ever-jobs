@@ -777,4 +777,4 @@
 
 ---
 
-_Last revised: 2026-06-04 (run #431 — Specs 696–700: 5 Greenhouse company-direct source plugins — Amperity, Keeper Security, mabl, Proton, StackBlitz). 2026-06-07 ad-hoc: added Spec 701 (Job Notis Notifier) per user request; companion to `docs/JOB_NOTIS_PLAN.md` Phase 1._
+_Last revised: 2026-06-13 — Added LLM ranker (`apps/collector/src/rankers/`), social discovery (`scripts/social-discovery.ts`), source discovery (`scripts/discover-sources.ts`), Wellfound DOM fix, stricter persona filter, social post notifier format._
