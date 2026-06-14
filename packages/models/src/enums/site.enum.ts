@@ -1555,6 +1555,9 @@ export enum Site {
   PROTON = 'proton',
   // Phase 709: Spec 700 — Source Company Plugin: StackBlitz
   STACKBLITZ = 'stackblitz',
+  // Nigerian job boards
+  NGDEVS = 'ngdevs',
+  NGJOBVACANCIES = 'ngjobvacancies',
 }
 
 /**

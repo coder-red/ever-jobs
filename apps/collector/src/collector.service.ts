@@ -7,7 +7,7 @@ import {
   SOURCE_BATCHES,
   SourceBatch,
 } from './config/batches';
-import { matchesPersona } from './filters/persona.filter';
+import { matchesAiMlRemoteRole } from './filters/persona.filter';
 import { LlmRankerService } from './rankers/llm-ranker.service';
 import { CollatedJobsStore, CollatedJobRow } from './store/collated-jobs.store';
 
@@ -115,7 +115,7 @@ export class CollectorService {
           const matchedJobs = allJobs.filter((job: JobPostDto) => {
             const dateStr = job.datePosted instanceof Date ? job.datePosted.toISOString() : job.datePosted;
             if (!isWithinHoursOld(dateStr, hoursOld)) return false;
-            if (matchesPersona(job, { allowHybrid })) return true;
+            if (matchesAiMlRemoteRole(job, { allowHybrid })) return true;
             if (rejectSamples.length < 5) {
               rejectSamples.push(`${job.title} @ ${job.companyName ?? job.site ?? '?'}`);
             }

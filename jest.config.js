@@ -35,6 +35,8 @@ module.exports = {
     '^@ever-jobs/source-ats-rippling$': '<rootDir>/packages/plugins/source-ats-rippling/src/index.ts',
     '^@ever-jobs/source-ats-workday$': '<rootDir>/packages/plugins/source-ats-workday/src/index.ts',
     '^@ever-jobs/source-company-stackblitz$': '<rootDir>/packages/plugins/source-company-stackblitz/src/index.ts',
+    '^@ever-jobs/source-ngdevs$': '<rootDir>/packages/plugins/source-ngdevs/src/index.ts',
+    '^@ever-jobs/source-ngjobvacancies$': '<rootDir>/packages/plugins/source-ngjobvacancies/src/index.ts',
     '^@ever-jobs/source-company-proton$': '<rootDir>/packages/plugins/source-company-proton/src/index.ts',
     '^@ever-jobs/source-company-mabl$': '<rootDir>/packages/plugins/source-company-mabl/src/index.ts',
     '^@ever-jobs/source-company-keepersecurity$': '<rootDir>/packages/plugins/source-company-keepersecurity/src/index.ts',

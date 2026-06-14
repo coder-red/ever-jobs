@@ -80,4 +80,11 @@ export const SOURCE_BATCHES: readonly SourceBatch[] = [
       Site.LANDINGJOBS,
     ],
   },
+  {
+    name: 'ng-job-boards',
+    sites: [
+      Site.NGDEVS,
+      Site.NGJOBVACANCIES,
+    ],
+  },
 ];

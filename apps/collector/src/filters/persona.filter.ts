@@ -104,6 +104,24 @@ export function isZeroExpFriendly(description?: string | null): boolean {
   return true;
 }
 
+/**
+ * Matches ANY AI/ML Engineer role that's remote — no seniority/grad/exp filtering.
+ * Use this to capture all AI/ML roles (intern → principal, paid, unpaid, volunteer).
+ */
+export function matchesAiMlRemoteRole(
+  job: JobPostDto,
+  options: PersonaFilterOptions = {},
+): boolean {
+  if (!job.jobUrl || !job.title) return false;
+  const titleOnly = job.title;
+  const blob = titleBlob(job);
+
+  const isAiRole = matchesAiRole(titleOnly) || matchesAiRole(blob);
+  if (!isAiRole) return false;
+
+  return isRemoteRole(job, options);
+}
+
 export function matchesPersona(
   job: JobPostDto,
   options: PersonaFilterOptions = {},

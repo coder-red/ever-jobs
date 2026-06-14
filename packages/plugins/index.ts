@@ -854,6 +854,8 @@ import { KeeperSecurityModule } from './source-company-keepersecurity';
 import { MablModule } from './source-company-mabl';
 import { ProtonModule } from './source-company-proton';
 import { StackBlitzModule } from './source-company-stackblitz';
+import { NgDevsModule } from './source-ngdevs';
+import { NgJobVacanciesModule } from './source-ngjobvacancies';
 export const ALL_SOURCE_MODULES = [
   FourDayWeekModule,
   AcademiccareersModule,
@@ -1701,4 +1703,6 @@ export const ALL_SOURCE_MODULES = [
   MablModule,
   ProtonModule,
   StackBlitzModule,
+  NgDevsModule,
+  NgJobVacanciesModule,
 ];

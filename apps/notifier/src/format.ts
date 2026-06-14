@@ -19,6 +19,8 @@ const PLATFORM_EMOJI: Record<string, string> = {
 const ENTRY_KEYWORDS = /\b(junior|jr\b|entry|entry.level|graduate|new.?grad|early.?career|intern|internship|trainee|apprentice)\b/i;
 const MID_KEYWORDS = /\b(mid\b|mid.level|intermediate)\b/i;
 const SENIOR_KEYWORDS = /\b(senior|sr\b|staff\b|principal|lead\b|architect|head\s+of|director|vp\b|vice.?president|manager|principal)\b/i;
+const INTERN_KEYWORDS = /\b(intern|internship|trainee|apprentice|co.?op)\b/i;
+const VOLUNTEER_KEYWORDS = /\b(volunteer|voluntary|unpaid)\b/i;
 
 function parsePayload(payloadJson: string): Record<string, unknown> {
   try {
@@ -160,6 +162,10 @@ export function formatJob(job: CollatedJob): string {
   lines.push(escapeHtml(`📍 ${location}`));
   lines.push(`🏆 Fit: ${label} ${score}/100 (${source})`);
   if (isStartup) lines.push(`🚀 Startup / seed`);
+
+  const rawTitle = job.title ?? '';
+  if (INTERN_KEYWORDS.test(rawTitle)) lines.push(`🎓 Internship / Trainee`);
+  if (VOLUNTEER_KEYWORDS.test(rawTitle)) lines.push(`💚 Volunteer / Unpaid`);
 
   const badge = zeroExpBadge(payload);
   if (badge) lines.push(badge);
