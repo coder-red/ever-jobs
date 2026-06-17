@@ -36,12 +36,6 @@ export default () => {
       timeframeSec: parseInt(process.env.RATE_LIMIT_TIMEFRAME, 3600),
     },
 
-    // Proxy
-    proxy: {
-      defaults: parseList(process.env.DEFAULT_PROXIES),
-      caCertPath: process.env.CA_CERT_PATH || null,
-    },
-
     // Search Defaults
     defaults: {
       siteNames: parseList(

@@ -29,6 +29,7 @@ export class EverJobsClient {
       baseURL: options.baseUrl.replace(/\/$/, ''),
       timeout: options.timeoutMs ?? 120_000,
       headers,
+      proxy: false,  // disable system proxy for internal API calls
     });
   }
 
