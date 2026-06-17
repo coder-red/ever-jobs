@@ -86,7 +86,7 @@ Description: ${(description ?? '').slice(0, 3000)}`;
         'X-Title': 'Ever Jobs Ranker',
       },
       body: JSON.stringify({
-        model: 'qwen3-235b-a22b:free',
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0.1,
