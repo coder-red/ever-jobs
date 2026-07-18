@@ -21,6 +21,7 @@
 | [`index.md`](./index.md)         | This index.                                |
 | [`log.md`](./log.md)             | Append-only changelog of doc/spec edits.   |
 | [`questions.md`](./questions.md) | Open questions ledger w/ defaults.         |
+| [`BUILD_LOG.md`](./BUILD_LOG.md) | Build/deploy history & CI notes.           |
 
 ## 2. Architecture & Reference
 
@@ -47,12 +48,13 @@
 | [`ROADMAP.md`](./ROADMAP.md)        | Feature roadmap by version.                       |
 | [`PRD_NEW_JOB_SOURCES.md`](./PRD_NEW_JOB_SOURCES.md) | Product reqs for new sources.    |
 | [`SOURCE_ADOPTION_BACKLOG.md`](./SOURCE_ADOPTION_BACKLOG.md) | Inbound queue of platforms to adopt as source plugins. |
+| [`JOB_NOTIS_PLAN.md`](./JOB_NOTIS_PLAN.md) | Job-notifier (Telegram) product & delivery plan. |
 
 ## 4. Plans (`docs/plans/`)
 
 | File | Purpose |
 | ---- | ------- |
-| _none yet_ | Plans will be added as new specs ship. |
+| [`web-discovery-llm-agent.md`](./plans/web-discovery-llm-agent.md) | LLM web-discovery agent for finding new job sources. |
 
 ## 5. ADRs (`docs/adr/`)
 

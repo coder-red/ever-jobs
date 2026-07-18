@@ -5,7 +5,7 @@
 
 ---
 
-## 2026-06-13 v2 — Zero-exp experience filter, LLM zeroExpFriendly, notifier badge
+## 2026-06-13 (run #440) v2 — Zero-exp experience filter, LLM zeroExpFriendly, notifier badge
 
 - **Modified** `apps/collector/src/filters/persona.filter.ts` — Added `isZeroExpFriendly()` that scans job descriptions for experience requirements. Rejects jobs requiring 2+ years unless portfolio alternative mentioned. Matches range ("2-4 years") and plus ("2+ years") patterns.
 - **Modified** `apps/collector/src/rankers/llm-ranker.service.ts` — LLM prompt now asks for `zeroExpFriendly` and `experienceRequired` fields. Extended `LlmRankResult` interface.
@@ -24,7 +24,7 @@
 - **Modified** `apps/notifier/src/format.ts` — Uses LLM score from payload_json when available. Social posts (`site.startsWith("social-")`) get alternate format with platform emoji, author, and vibe-coder badge.
 - **Modified** `apps/collector/src/__tests__/persona.filter.spec.ts` — Updated test to reject Scientist/Trainer roles per stricter filtering.
 
-## 2026-06-07 — Spec 701 (GHA 24/7 deployment path added)
+## 2026-06-07 (run #434) — Spec 701 (GHA 24/7 deployment path added)
 
 - **New file** `.github/workflows/notis.yml` — single workflow, runs every 30 min
   on `ubuntu-latest`, public repo = unlimited minutes. Builds the NestJS API
@@ -54,7 +54,7 @@
 
 ---
 
-## 2026-06-07 — Spec 701 (Notifier MVP live + two bug fixes)
+## 2026-06-07 (run #433) — Spec 701 (Notifier MVP live + two bug fixes)
 
 - **Status:** Spec 701 MVP **live and end-to-end verified** (Telegram delivery
   confirmed: `[notis] cycle=1 total=2 new=2 sent=2 failed=0 notified_store=2`).
