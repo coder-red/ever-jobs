@@ -1,9 +1,12 @@
 import { JobPostDto } from '@ever-jobs/models';
 import {
   isGradRole,
+  isHugeCompany,
+  isNigeriaRole,
   isRemoteRole,
   isSeniorRole,
   isZeroExpFriendly,
+  matchesAiMlRemoteRole,
   matchesAiRole,
   matchesJuniorLevel,
   matchesPersona,
@@ -116,6 +119,120 @@ describe('persona.filter', () => {
         baseJob({ title: 'Data Scientist' }),
       ),
     ).toBe(false);
+  });
+
+  describe('matchesAiMlRemoteRole (active collector filter)', () => {
+    const ngLoc = { city: 'Lagos', state: 'Lagos', country: 'Nigeria' } as JobPostDto['location'];
+    const usLoc = { city: 'Austin', state: 'TX', country: 'US' } as JobPostDto['location'];
+
+    it('rejects senior AI roles INTERNATIONALLY (user wants junior)', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Senior AI Engineer', isRemote: true, location: usLoc })),
+      ).toBe(false);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Staff Machine Learning Engineer', isRemote: true, location: usLoc })),
+      ).toBe(false);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Lead ML Engineer', isRemote: true, location: usLoc })),
+      ).toBe(false);
+    });
+
+    it('accepts Nigerian AI/ML roles even when on-site', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', isRemote: false, location: ngLoc }),
+        ),
+      ).toBe(true);
+    });
+
+    it('accepts SENIOR Nigerian AI/ML roles (seniority ignored for Nigeria)', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Senior AI Engineer', isRemote: false, location: ngLoc })),
+      ).toBe(true);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Lead Machine Learning Engineer', isRemote: false, location: ngLoc })),
+      ).toBe(true);
+    });
+
+    it('accepts broad Nigerian AI/ML roles (data scientist, NLP, researcher)', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Data Scientist', isRemote: false, location: ngLoc })),
+      ).toBe(true);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Machine Learning Researcher', isRemote: false, location: ngLoc })),
+      ).toBe(true);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'NLP Specialist', isRemote: false, location: ngLoc })),
+      ).toBe(true);
+    });
+
+    it('rejects non-AI Nigerian roles', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Frontend Developer', isRemote: false, location: ngLoc })),
+      ).toBe(false);
+    });
+
+    it('accepts Nigerian AI/ML roles from a huge company', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'ML Engineer', companyName: 'Microsoft', isRemote: false, location: ngLoc }),
+        ),
+      ).toBe(true);
+    });
+
+    it('rejects international on-site AI/ML roles', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', isRemote: false, location: usLoc }),
+        ),
+      ).toBe(false);
+    });
+
+    it('accepts international remote AI/ML roles at small companies', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', companyName: 'Acme', isRemote: true, location: usLoc }),
+        ),
+      ).toBe(true);
+    });
+
+    it('rejects international remote roles at huge companies (slim odds)', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', companyName: 'Google', isRemote: true, location: usLoc }),
+        ),
+      ).toBe(false);
+    });
+
+    it('rejects scientist roles INTERNATIONALLY (engineer only abroad)', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'AI Research Scientist', isRemote: true, location: usLoc })),
+      ).toBe(false);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'Data Scientist', isRemote: true, location: usLoc })),
+      ).toBe(false);
+    });
+
+    it('rejects non-job posts (founder/trainer/participant) even in Nigeria', () => {
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'AI Trainer', location: ngLoc })),
+      ).toBe(false);
+      expect(
+        matchesAiMlRemoteRole(baseJob({ title: 'AI Co-Founder', location: ngLoc })),
+      ).toBe(false);
+    });
+
+    it('isNigeriaRole detects country field and city text', () => {
+      expect(isNigeriaRole(baseJob({ location: ngLoc }))).toBe(true);
+      expect(isNigeriaRole(baseJob({ title: 'ML Engineer - Abuja' }))).toBe(true);
+      expect(isNigeriaRole(baseJob({ location: usLoc }))).toBe(false);
+    });
+
+    it('isHugeCompany flags big tech only', () => {
+      expect(isHugeCompany(baseJob({ companyName: 'Amazon Web Services' }))).toBe(true);
+      expect(isHugeCompany(baseJob({ companyName: 'Acme AI' }))).toBe(false);
+      expect(isHugeCompany(baseJob({ companyName: null }))).toBe(false);
+    });
   });
 
   describe('isZeroExpFriendly', () => {

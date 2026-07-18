@@ -99,10 +99,13 @@ export class CollectorService {
         try {
           this.logger.log(`Batch "${batch.name}" — ${batch.sites.length} sources`);
 
+          // Nigerian boards: fetch on-site + remote (user wants EVERY local
+          // AI/ML role). International boards stay remote-only to cut noise.
+          const isNigeriaBatch = batch.name === 'ng-job-boards';
           const input = new ScraperInputDto({
             siteType: batch.sites,
             searchTerm,
-            isRemote: true,
+            isRemote: isNigeriaBatch ? false : true,
             hoursOld,
             resultsWanted,
           });

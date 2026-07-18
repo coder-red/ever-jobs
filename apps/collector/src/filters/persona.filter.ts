@@ -2,6 +2,10 @@ import { JobPostDto, LocationDto } from '@ever-jobs/models';
 
 const AI_PATTERN =
   /\b(?:ai|machine learning|artificial intelligence)\s+(?:engineer|engineering|engr)\b|\b(?:ml|ai\/ml)\s+(?:engineer|engineering|engr)\b|\bmle\b/i;
+// Broad AI/ML signal — ANY role in the field (engineer, scientist, researcher,
+// data science, MLOps, NLP, CV, LLM, prompt). Used for Nigeria max-coverage.
+const AI_BROAD =
+  /\b(?:a\.?i\.?|artificial\s+intelligence|machine\s*learning|\bml\b|ai\/ml|ml\s*ops|mlops|deep\s*learning|neural\s*network|\bnlp\b|natural\s+language|computer\s*vision|\bcv\b|\bllm\b|generative\s*ai|gen\s*ai|data\s*scien(?:ce|tist)|prompt\s+engineer)\b/i;
 const JUNIOR_PATTERN =
   /\b(junior|entry[- ]?level|associate|intern(ship)?|co-?op|trainee|apprentice|0-2 years?|0-1 years?|early career)\b/i;
 const GRAD_EXCLUDE_PATTERN =
@@ -18,6 +22,14 @@ const REMOTE_POSITIVE =
   /\b(remote|work from home|wfh|anywhere|distributed|worldwide|telecommute)\b/i;
 const REMOTE_NEGATIVE = /\b(on[- ]site|in[- ]office)\b/i;
 const HYBRID_PATTERN = /\bhybrid\b/i;
+// Nigeria: country name, demonym, or major cities. Used to accept local roles
+// regardless of remote/company (user wants EVERY Nigerian AI/ML role).
+const NIGERIA_PATTERN =
+  /\b(nigeria|nigerian|lagos|abuja|ibadan|kano|port\s*harcourt|benin\s*city|kaduna|enugu|abeokuta|ilorin|onitsha|warri|uyo|owerri|jos|maiduguri|lekki|ikeja|yaba|victoria\s*island)\b/i;
+// Huge/very-competitive employers — excluded for INTERNATIONAL roles only
+// (slim odds). Nigerian roles are never filtered by company.
+const HUGE_COMPANY =
+  /\b(google|alphabet|meta|facebook|microsoft|amazon|aws|apple|netflix|openai|anthropic|nvidia|tesla|ibm|oracle|intel|salesforce|adobe|uber|airbnb|spotify|linkedin|bytedance|tiktok|tencent|alibaba|baidu|samsung|deepmind|snap(chat)?|paypal|stripe|databricks|palantir|cisco|qualcomm|sap|dell|huawei|sony|deloitte|accenture|pwc|kpmg|mckinsey|jpmorgan|goldman\s*sachs|morgan\s*stanley|jane\s*street|citadel|two\s*sigma)\b/i;
 
 export interface PersonaFilterOptions {
   readonly allowHybrid?: boolean;
@@ -104,12 +116,36 @@ export function isZeroExpFriendly(description?: string | null): boolean {
   return true;
 }
 
-/**
- * Matches ANY AI/ML Engineer role that's remote — no seniority/grad/exp filtering.
- * Use this to capture all AI/ML roles (intern → principal, paid, unpaid, volunteer).
- */
 const NON_ENGINEER_AI = /\b(co-?founder|founder|trainer(?!\s+engineer)|participant)\b/i;
 
+/**
+ * True when a job is located in Nigeria — checks the structured country field
+ * first, then falls back to country/state/city text and the title.
+ */
+export function isNigeriaRole(job: JobPostDto): boolean {
+  const country = job.location?.country;
+  if (country && NIGERIA_PATTERN.test(country)) return true;
+  const blob = `${job.title ?? ''} ${formatLocation(job.location)}`;
+  return NIGERIA_PATTERN.test(blob);
+}
+
+/**
+ * True when the employer is a huge / very-competitive company (used to skip
+ * long-shot INTERNATIONAL roles; never applied to Nigerian roles).
+ */
+export function isHugeCompany(job: JobPostDto): boolean {
+  if (!job.companyName) return false;
+  return HUGE_COMPANY.test(job.companyName);
+}
+
+/**
+ * Location-aware AI/ML role filter:
+ *   - Nigeria (max coverage): ANY AI/ML role — engineer, scientist, researcher,
+ *     data science, etc. — at ANY seniority, any company, remote or on-site.
+ *     Only obvious non-jobs (founder/participant) are dropped.
+ *   - International (strict): AI/ML *Engineer* only, junior-level, remote, and
+ *     not a huge/competitive company (long-shot odds).
+ */
 export function matchesAiMlRemoteRole(
   job: JobPostDto,
   options: PersonaFilterOptions = {},
@@ -118,6 +154,13 @@ export function matchesAiMlRemoteRole(
   const titleOnly = job.title;
   const blob = titleBlob(job);
 
+  // Nigeria branch — cast the widest net. Any AI/ML role, any level, any company.
+  if (isNigeriaRole(job)) {
+    if (NON_ENGINEER_AI.test(titleOnly)) return false;
+    return AI_BROAD.test(titleOnly) || AI_BROAD.test(blob);
+  }
+
+  // International branch — strict AI/ML Engineer persona.
   const isAiRole = matchesAiRole(titleOnly) || matchesAiRole(blob);
   if (!isAiRole) return false;
 
@@ -125,7 +168,14 @@ export function matchesAiMlRemoteRole(
   if (SCIENTIST_EXCLUDE.test(titleOnly) || SCIENTIST_EXCLUDE.test(blob)) return false;
   if (NON_ENGINEER_AI.test(titleOnly)) return false;
 
-  return isRemoteRole(job, options);
+  // Reject senior/staff/lead/principal/etc — user wants junior-level roles
+  if (isSeniorRole(titleOnly) || isSeniorRole(blob)) return false;
+
+  // International: remote only, and skip huge companies (slim odds).
+  if (!isRemoteRole(job, options)) return false;
+  if (isHugeCompany(job)) return false;
+
+  return true;
 }
 
 export function matchesPersona(
