@@ -1558,6 +1558,15 @@ export enum Site {
   // Nigerian job boards
   NGDEVS = 'ngdevs',
   NGJOBVACANCIES = 'ngjobvacancies',
+  MYJOBMAG = 'myjobmag',
+  HOTNIGERIANJOBS = 'hotnigerianjobs',
+  AICAREERS = 'aicareers',
+  NAIJAREMOTEJOBS = 'naijaremotejobs',
+  JOBNOW = 'jobnow',
+  JOBGURUS = 'jobgurus',
+  HN_SOCIAL = 'hn_social',
+  REDDIT_SOCIAL = 'reddit_social',
+  BLUESKY_SOCIAL = 'bluesky_social',
 }
 
 /**

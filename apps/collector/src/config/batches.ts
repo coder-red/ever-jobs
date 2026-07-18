@@ -81,10 +81,24 @@ export const SOURCE_BATCHES: readonly SourceBatch[] = [
     ],
   },
   {
+    name: 'social-posts',
+    sites: [
+      Site.HN_SOCIAL,
+      Site.REDDIT_SOCIAL,
+      Site.BLUESKY_SOCIAL,
+    ],
+  },
+  {
     name: 'ng-job-boards',
     sites: [
       Site.NGDEVS,
       Site.NGJOBVACANCIES,
+      Site.MYJOBMAG,
+      Site.HOTNIGERIANJOBS,
+      Site.AICAREERS,
+      Site.NAIJAREMOTEJOBS,
+      Site.JOBNOW,
+      Site.JOBGURUS,
     ],
   },
 ];

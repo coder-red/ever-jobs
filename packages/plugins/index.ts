@@ -856,6 +856,15 @@ import { ProtonModule } from './source-company-proton';
 import { StackBlitzModule } from './source-company-stackblitz';
 import { NgDevsModule } from './source-ngdevs';
 import { NgJobVacanciesModule } from './source-ngjobvacancies';
+import { MyJobMagModule } from './source-myjobmag';
+import { HotNigerianJobsModule } from './source-hotnigerianjobs';
+import { AicareersModule } from './source-aicareers';
+import { NaijaremotejobsModule } from './source-naijaremotejobs';
+import { JobnowModule } from './source-jobnow';
+import { JobgurusModule } from './source-jobgurus';
+import { HnSocialModule } from './source-hn-social';
+import { RedditSocialModule } from './source-reddit-social';
+import { BlueskySocialModule } from './source-bluesky-social';
 export const ALL_SOURCE_MODULES = [
   FourDayWeekModule,
   AcademiccareersModule,
@@ -1705,4 +1714,13 @@ export const ALL_SOURCE_MODULES = [
   StackBlitzModule,
   NgDevsModule,
   NgJobVacanciesModule,
+  MyJobMagModule,
+  HotNigerianJobsModule,
+  AicareersModule,
+  NaijaremotejobsModule,
+  JobnowModule,
+  JobgurusModule,
+  HnSocialModule,
+  RedditSocialModule,
+  BlueskySocialModule,
 ];
