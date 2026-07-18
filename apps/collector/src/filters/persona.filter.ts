@@ -40,6 +40,14 @@ const SOCIAL_SITES: ReadonlySet<string> = new Set([
 // A post that reads like an offer to hire (guards against pure AI/ML chatter).
 const HIRING_SIGNAL =
   /\b(hiring|we're hiring|we are hiring|looking to hire|looking for|seeking|need(?:ed|ing)?|join (?:our|the)|apply|role|position|opening|vacancy|now hiring|job opportunity|dm me|reach out)\b/i;
+// Reputable staffing firms that genuinely place juniors — allowed through even
+// though they are agencies (checked BEFORE the low-quality block below).
+const RECRUITER_ALLOWLIST =
+  /\b(insight\s*global|teksystems|robert\s*half|randstad|adecco|aerotek|motion\s*recruitment|michael\s*page|hays|kelly\s*services|robert\s*walters|manpowergroup)\b/i;
+// Recruiter / aggregator / job-mill markers — low-signal reposts, usually not
+// the real employer. Includes specific offenders observed in the store.
+const LOW_QUALITY_COMPANY =
+  /\b(staffing|recruit(?:er|ing|ment)?|headhunt|consultanc|jobs?\s+via|\bdice\b|lensa|jobot|cybercoders|ziprecruiter|chatgpt\s+jobs|hire\s*feed|job\s*board|placement\s+(?:agency|services)|resourcing|outsourc|tekvizor|ventures\s+unlimited|crossing\s+hurdles)\b/i;
 // Huge/very-competitive employers — excluded for INTERNATIONAL roles only
 // (slim odds). Nigerian roles are never filtered by company.
 const HUGE_COMPANY =
@@ -168,6 +176,24 @@ export function isSocialSource(job: JobPostDto): boolean {
 }
 
 /**
+ * True for low-signal board listings that usually aren't the real employer:
+ * staffing agencies, recruiter/job-mill brands, "via X" aggregator reposts, and
+ * titles carrying a staffing req-number. Reputable agencies are allow-listed.
+ * Extend LOW_QUALITY_COMPANY as new offenders show up in the store.
+ */
+export function isLowQualityListing(job: JobPostDto): boolean {
+  const company = job.companyName ?? '';
+  if (RECRUITER_ALLOWLIST.test(company)) return false;
+  if (LOW_QUALITY_COMPANY.test(company)) return true;
+  // Substring match (no word boundary) so camelCase brands like
+  // "CodeGeniusRecruit" or "TalentStaffing" are still caught.
+  if (/recruit|staffing|headhunt/i.test(company)) return true;
+  if (/\bvia\b/i.test(company)) return true; // "Jobs via <X>" reposts
+  if (/\b\d{5,}\b/.test(job.title ?? '')) return true; // staffing ATS req-number
+  return false;
+}
+
+/**
  * Location-aware AI/ML role filter:
  *   - Nigeria (max coverage): ANY AI/ML role — engineer, scientist, researcher,
  *     data science, etc. — at ANY seniority, any company, remote or on-site.
@@ -219,6 +245,9 @@ export function matchesAiMlRemoteRole(
   // International: remote only, and skip huge companies (slim odds).
   if (!isRemoteRole(job, options)) return false;
   if (isHugeCompany(job)) return false;
+
+  // Drop staffing/recruiter/aggregator reposts — usually not the real employer.
+  if (isLowQualityListing(job)) return false;
 
   return true;
 }

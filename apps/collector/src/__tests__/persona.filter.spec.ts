@@ -3,6 +3,7 @@ import {
   isGradRole,
   isHugeCompany,
   isIndiaRole,
+  isLowQualityListing,
   isNigeriaRole,
   isRemoteRole,
   isSeniorRole,
@@ -318,6 +319,57 @@ describe('persona.filter', () => {
       expect(isSocialSource(baseJob({ site: Site.REDDIT_SOCIAL }))).toBe(true);
       expect(isSocialSource(baseJob({ site: Site.LINKEDIN }))).toBe(false);
       expect(isSocialSource(baseJob())).toBe(false);
+    });
+  });
+
+  describe('staffing / recruiter / aggregator noise (LinkedIn)', () => {
+    const usLoc = { city: 'United States', state: null, country: 'US' } as JobPostDto['location'];
+    const board = (o: Partial<JobPostDto> = {}) =>
+      baseJob({ site: Site.LINKEDIN, isRemote: true, location: usLoc, ...o });
+
+    it('rejects aggregator / recruiter brands seen in the store', () => {
+      for (const company of ['ChatGPT Jobs', 'CodeGeniusRecruit', 'Jobs via Dice', 'Hire Feed', 'TekVizor', 'Ventures Unlimited Inc', 'Crossing Hurdles']) {
+        expect(
+          matchesAiMlRemoteRole(board({ title: 'AI Engineer - Remote', companyName: company })),
+        ).toBe(false);
+      }
+    });
+
+    it('rejects titles carrying a staffing req-number', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          board({ title: 'AI Engineer Machine learning and Model Development Remote 68968', companyName: 'Acme' }),
+        ),
+      ).toBe(false);
+    });
+
+    it('KEEPS reputable staffing firms that place juniors (allowlist)', () => {
+      expect(
+        matchesAiMlRemoteRole(board({ title: 'Remote JR AI Engineer', companyName: 'Insight Global' })),
+      ).toBe(true);
+      expect(
+        matchesAiMlRemoteRole(board({ title: 'AI Engineer - Remote', companyName: 'Robert Half Technology' })),
+      ).toBe(true);
+    });
+
+    it('KEEPS a direct employer', () => {
+      expect(
+        matchesAiMlRemoteRole(board({ title: 'AI Engineer - Remote', companyName: 'Answer Financial' })),
+      ).toBe(true);
+    });
+
+    it('does not flag a 4-digit year as a req-number', () => {
+      expect(isLowQualityListing(baseJob({ title: 'AI Engineer 2026', companyName: 'Acme' }))).toBe(false);
+    });
+
+    it('never touches Nigerian roles (still max coverage)', () => {
+      // A staffing-named company posting a Lagos role still passes.
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', companyName: 'Lagos Tech Staffing', isRemote: false,
+            location: { city: 'Lagos', country: 'Nigeria' } as JobPostDto['location'] }),
+        ),
+      ).toBe(true);
     });
   });
 
