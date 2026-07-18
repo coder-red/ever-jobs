@@ -1,4 +1,4 @@
-import { JobPostDto, LocationDto } from '@ever-jobs/models';
+import { JobPostDto, LocationDto, Site } from '@ever-jobs/models';
 
 const AI_PATTERN =
   /\b(?:ai|machine learning|artificial intelligence)\s+(?:engineer|engineering|engr)\b|\b(?:ml|ai\/ml)\s+(?:engineer|engineering|engr)\b|\bmle\b/i;
@@ -26,6 +26,20 @@ const HYBRID_PATTERN = /\bhybrid\b/i;
 // regardless of remote/company (user wants EVERY Nigerian AI/ML role).
 const NIGERIA_PATTERN =
   /\b(nigeria|nigerian|lagos|abuja|ibadan|kano|port\s*harcourt|benin\s*city|kaduna|enugu|abeokuta|ilorin|onitsha|warri|uyo|owerri|jos|maiduguri|lekki|ikeja|yaba|victoria\s*island)\b/i;
+// India — excluded everywhere except Nigeria (too much low-signal volume for
+// this search). Country field is checked separately for the "IN" code.
+const INDIA_PATTERN =
+  /\b(india|indian|bengaluru|bangalore|hyderabad|mumbai|new\s*delhi|delhi|\bpune\b|chennai|kolkata|gurgaon|gurugram|noida|ahmedabad|jaipur|coimbatore)\b/i;
+// Social sources (post-based). Handled leniently: any location (not India),
+// remote or on-site, as long as it's an AI/ML hiring post.
+const SOCIAL_SITES: ReadonlySet<string> = new Set([
+  Site.HN_SOCIAL,
+  Site.REDDIT_SOCIAL,
+  Site.BLUESKY_SOCIAL,
+]);
+// A post that reads like an offer to hire (guards against pure AI/ML chatter).
+const HIRING_SIGNAL =
+  /\b(hiring|we're hiring|we are hiring|looking to hire|looking for|seeking|need(?:ed|ing)?|join (?:our|the)|apply|role|position|opening|vacancy|now hiring|job opportunity|dm me|reach out)\b/i;
 // Huge/very-competitive employers — excluded for INTERNATIONAL roles only
 // (slim odds). Nigerian roles are never filtered by company.
 const HUGE_COMPANY =
@@ -138,13 +152,31 @@ export function isHugeCompany(job: JobPostDto): boolean {
   return HUGE_COMPANY.test(job.companyName);
 }
 
+/** True when a job is in India (excluded everywhere except Nigeria). */
+export function isIndiaRole(job: JobPostDto): boolean {
+  const country = job.location?.country;
+  if (country && (/india/i.test(country) || country.trim().toUpperCase() === 'IN')) {
+    return true;
+  }
+  const blob = `${job.title ?? ''} ${formatLocation(job.location)}`;
+  return INDIA_PATTERN.test(blob);
+}
+
+/** True when the job came from a post-based social source. */
+export function isSocialSource(job: JobPostDto): boolean {
+  return !!job.site && SOCIAL_SITES.has(job.site);
+}
+
 /**
  * Location-aware AI/ML role filter:
  *   - Nigeria (max coverage): ANY AI/ML role — engineer, scientist, researcher,
  *     data science, etc. — at ANY seniority, any company, remote or on-site.
  *     Only obvious non-jobs (founder/participant) are dropped.
- *   - International (strict): AI/ML *Engineer* only, junior-level, remote, and
- *     not a huge/competitive company (long-shot odds).
+ *   - India: excluded everywhere except Nigeria (too much low-signal volume).
+ *   - Social posts (HN/Reddit/Bluesky): ANY location (not India), remote or
+ *     on-site, as long as it reads like an AI/ML hiring post.
+ *   - International boards (strict): AI/ML *Engineer* only, junior-level,
+ *     remote, and not a huge/competitive company (long-shot odds).
  */
 export function matchesAiMlRemoteRole(
   job: JobPostDto,
@@ -155,9 +187,22 @@ export function matchesAiMlRemoteRole(
   const blob = titleBlob(job);
 
   // Nigeria branch — cast the widest net. Any AI/ML role, any level, any company.
+  // (Checked before the India exclusion — a Nigerian role is never in India.)
   if (isNigeriaRole(job)) {
     if (NON_ENGINEER_AI.test(titleOnly)) return false;
     return AI_BROAD.test(titleOnly) || AI_BROAD.test(blob);
+  }
+
+  // Exclude India everywhere else — too noisy for this search.
+  if (isIndiaRole(job)) return false;
+
+  // Social posts — accept any location, remote or on-site, if it's an AI/ML
+  // hiring post. A titled role ("ML Engineer @ X") counts as hiring intent.
+  if (isSocialSource(job)) {
+    const isAi = AI_BROAD.test(titleOnly) || AI_BROAD.test(blob);
+    if (!isAi) return false;
+    const text = `${titleOnly} ${job.description ?? ''}`;
+    return HIRING_SIGNAL.test(text) || matchesAiRole(titleOnly);
   }
 
   // International branch — strict AI/ML Engineer persona.

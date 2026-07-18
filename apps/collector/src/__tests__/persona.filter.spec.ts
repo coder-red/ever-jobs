@@ -1,10 +1,12 @@
-import { JobPostDto } from '@ever-jobs/models';
+import { JobPostDto, Site } from '@ever-jobs/models';
 import {
   isGradRole,
   isHugeCompany,
+  isIndiaRole,
   isNigeriaRole,
   isRemoteRole,
   isSeniorRole,
+  isSocialSource,
   isZeroExpFriendly,
   matchesAiMlRemoteRole,
   matchesAiRole,
@@ -232,6 +234,90 @@ describe('persona.filter', () => {
       expect(isHugeCompany(baseJob({ companyName: 'Amazon Web Services' }))).toBe(true);
       expect(isHugeCompany(baseJob({ companyName: 'Acme AI' }))).toBe(false);
       expect(isHugeCompany(baseJob({ companyName: null }))).toBe(false);
+    });
+  });
+
+  describe('social sources + India exclusion', () => {
+    const usLoc = { city: 'Austin', state: 'TX', country: 'US' } as JobPostDto['location'];
+    const inLoc = { city: 'Bengaluru', state: 'KA', country: 'India' } as JobPostDto['location'];
+    const ngLoc = { city: 'Lagos', state: 'Lagos', country: 'Nigeria' } as JobPostDto['location'];
+    const social = (o: Partial<JobPostDto> = {}) =>
+      baseJob({ site: Site.BLUESKY_SOCIAL, isRemote: false, ...o });
+
+    it('accepts on-site social AI hiring posts regardless of location', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'We are hiring an AI engineer in Berlin! DM me', location: usLoc }),
+        ),
+      ).toBe(true);
+    });
+
+    it('accepts a social post with no location at all', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'Need a machine learning engineer for our startup, apply now', location: null }),
+        ),
+      ).toBe(true);
+    });
+
+    it('rejects social posts from India (noise)', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'Hiring AI engineer, onsite', location: inLoc }),
+        ),
+      ).toBe(false);
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'ML Engineer wanted in Bengaluru', location: null }),
+        ),
+      ).toBe(false);
+    });
+
+    it('rejects non-AI social posts', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'Hiring a plumber, DM me', location: usLoc }),
+        ),
+      ).toBe(false);
+    });
+
+    it('rejects AI/ML chatter that is not a hiring post', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'Thoughts on the latest LLM benchmarks today', location: usLoc }),
+        ),
+      ).toBe(false);
+    });
+
+    it('accepts a titled social role even without an explicit hiring word', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          social({ title: 'AI Engineer @ Acme', location: usLoc, description: null }),
+        ),
+      ).toBe(true);
+    });
+
+    it('still routes Nigerian social posts through the Nigeria branch', () => {
+      expect(
+        matchesAiMlRemoteRole(social({ title: 'Data Scientist role', location: ngLoc })),
+      ).toBe(true);
+    });
+
+    it('excludes India on regular boards too (not just social)', () => {
+      expect(
+        matchesAiMlRemoteRole(
+          baseJob({ title: 'AI Engineer', isRemote: true, location: inLoc }),
+        ),
+      ).toBe(false);
+    });
+
+    it('isIndiaRole / isSocialSource helpers', () => {
+      expect(isIndiaRole(baseJob({ location: inLoc }))).toBe(true);
+      expect(isIndiaRole(baseJob({ title: 'ML Engineer - Mumbai' }))).toBe(true);
+      expect(isIndiaRole(baseJob({ location: usLoc }))).toBe(false);
+      expect(isSocialSource(baseJob({ site: Site.REDDIT_SOCIAL }))).toBe(true);
+      expect(isSocialSource(baseJob({ site: Site.LINKEDIN }))).toBe(false);
+      expect(isSocialSource(baseJob())).toBe(false);
     });
   });
 
