@@ -47,7 +47,7 @@ const RECRUITER_ALLOWLIST =
 // Recruiter / aggregator / job-mill markers — low-signal reposts, usually not
 // the real employer. Includes specific offenders observed in the store.
 const LOW_QUALITY_COMPANY =
-  /\b(staffing|recruit(?:er|ing|ment)?|headhunt|consultanc|jobs?\s+via|\bdice\b|lensa|jobot|cybercoders|ziprecruiter|chatgpt\s+jobs|hire\s*feed|job\s*board|placement\s+(?:agency|services)|resourcing|outsourc|tekvizor|ventures\s+unlimited|crossing\s+hurdles)\b/i;
+  /\b(staffing|recruit(?:er|ing|ment)?|headhunt|consultanc|jobs?\s+via|\bdice\b|lensa|jobot|cybercoders|ziprecruiter|chatgpt\s*jobs|hire\s*feed|job\s*board|placement\s+(?:agency|services)|resourcing|outsourc|tekvizor|ventures\s+unlimited|crossing\s+hurdles)\b/i;
 // Huge/very-competitive employers — excluded for INTERNATIONAL roles only
 // (slim odds). Nigerian roles are never filtered by company.
 const HUGE_COMPANY =

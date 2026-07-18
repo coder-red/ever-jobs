@@ -328,7 +328,7 @@ describe('persona.filter', () => {
       baseJob({ site: Site.LINKEDIN, isRemote: true, location: usLoc, ...o });
 
     it('rejects aggregator / recruiter brands seen in the store', () => {
-      for (const company of ['ChatGPT Jobs', 'CodeGeniusRecruit', 'Jobs via Dice', 'Hire Feed', 'TekVizor', 'Ventures Unlimited Inc', 'Crossing Hurdles']) {
+      for (const company of ['ChatGPT Jobs', 'ChatGPTJobs', 'CodeGeniusRecruit', 'Jobs via Dice', 'Hire Feed', 'TekVizor', 'Ventures Unlimited Inc', 'Crossing Hurdles']) {
         expect(
           matchesAiMlRemoteRole(board({ title: 'AI Engineer - Remote', companyName: company })),
         ).toBe(false);
