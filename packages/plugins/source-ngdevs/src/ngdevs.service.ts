@@ -51,31 +51,32 @@ export class NgDevsService implements IScraper {
 
         const pageJobs: JobPostDto[] = [];
 
-        $('a[href*="/jobs/"]').each((_i, el) => {
-          const card = $(el).closest('div').parent();
-          const titleEl = $(el).find('h2, h3, strong').first();
-          const title = titleEl.text().trim() || $(el).text().trim();
-          if (!title || title.length < 3) return;
+        $('a.vacancy-element').each((_i, el) => {
+          if (pageJobs.length >= resultsWanted) return false;
 
           const href = $(el).attr('href') || '';
           const jobUrl = href.startsWith('http') ? href : `https://devs.com.ng${href}`;
 
-          const cardText = card.text() || $(el).parent().text() || '';
+          const titleRaw = $('.vacancy-element-header', el).text().trim();
+          if (!titleRaw || titleRaw.length < 3) return;
+          // Strip job-type suffix (e.g. "On-site", "Remote") from title
+          const title = titleRaw.replace(/\s+(On-site|Remote|Hybrid)\s*$/i, '').trim();
 
-          const companyMatch = cardText.match(/@\s*([A-Za-z0-9&.\s-]+)/);
-          const companyName = companyMatch ? companyMatch[1].trim() : null;
+          const companyName = $('.company-name', el).text().trim() || null;
 
-          const locationMatch = cardText.match(/(Lagos|Abuja|Ibadan|Port Harcourt|Enugu|Kano|Kaduna|Remote|On-site)/i);
-          const location = locationMatch ? locationMatch[1] : null;
+          const location = $('.vacancy-text p:first', el).text().trim() || null;
 
-          const isRemote = /\bRemote\b/i.test(cardText);
+          const dateText = $('.vacancy-text p:nth-child(2)', el).text().trim() || null;
+          const datePosted = dateText ? this.parseDate(dateText) : null;
 
-          const dateMatch = cardText.match(/(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i);
-          const datePosted = dateMatch ? this.parseDate(dateMatch[1]) : null;
+          const typeText = $('.job-type-display', el).text().trim().toLowerCase();
+          const isRemote = typeText.includes('remote');
+
+          const description = $('.clamp-text', el).text().trim() || null;
 
           if (input.searchTerm) {
             const term = input.searchTerm.toLowerCase();
-            const allText = (title + ' ' + cardText).toLowerCase();
+            const allText = (title + ' ' + (companyName || '') + ' ' + (description || '')).toLowerCase();
             const terms = term.split(/\s+OR\s+/).map(t => t.trim().replace(/^"(.*)"$/, '$1'));
             const matches = terms.some(t => allText.includes(t.toLowerCase()));
             if (!matches) return;
@@ -86,8 +87,8 @@ export class NgDevsService implements IScraper {
             title,
             companyName,
             jobUrl,
-            location: new LocationDto({ city: location }),
-            description: cardText.slice(0, 1000),
+            location: location ? new LocationDto({ city: location }) : undefined,
+            description: description ? description.slice(0, 1000) : undefined,
             datePosted,
             isRemote,
             site: Site.NGDEVS,
@@ -96,7 +97,7 @@ export class NgDevsService implements IScraper {
 
         jobs.push(...pageJobs);
 
-        const hasNext = $('a:contains("Next"), a:contains("→"), a:contains(">")').length > 0;
+        const hasNext = $('a[href*="/jobs/page/"]').length > 0;
         if (!hasNext) break;
       } catch (err: any) {
         this.logger.warn(`Page ${page} error: ${err.message}`);

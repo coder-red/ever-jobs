@@ -16,7 +16,8 @@ import {
 } from '@ever-jobs/common';
 import * as cheerio from 'cheerio';
 
-const BASE_URL = 'https://jobvacancies.ng';
+const BASE_URL = 'https://jobvacancies.ng/jobs';
+const MAX_PAGES = 5;
 
 @SourcePlugin({
   site: Site.NGJOBVACANCIES,
@@ -38,62 +39,73 @@ export class NgJobVacanciesService implements IScraper {
 
     const jobs: JobPostDto[] = [];
 
-    try {
-      this.logger.log(`Fetching ${BASE_URL}`);
-      const response = await client.get(BASE_URL);
-      const html = typeof response.data === 'string' ? response.data : String(response.data);
-      const $ = cheerio.load(html);
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      if (jobs.length >= resultsWanted) break;
 
-      const seen = new Set<string>();
+      try {
+        const url = page === 1 ? BASE_URL : `${BASE_URL}?page=${page}`;
+        this.logger.log(`Fetching ${url}`);
+        const response = await client.get(url);
+        const html = typeof response.data === 'string' ? response.data : String(response.data);
+        const $ = cheerio.load(html);
 
-      $('a[href*="/jobs/"], a[href*="/job/"], a[href*="/listing/"]').each((_i, el) => {
-        if (jobs.length >= resultsWanted) return false;
+        const pageJobs: JobPostDto[] = [];
 
-        const href = $(el).attr('href') || '';
-        const jobUrl = href.startsWith('http') ? href : `https://jobvacancies.ng${href}`;
-        if (seen.has(jobUrl)) return;
-        seen.add(jobUrl);
+        $('article.card').each((_i, card) => {
+          if (pageJobs.length >= resultsWanted) return false;
 
-        const title = $(el).text().trim();
-        if (!title || title.length < 3) return;
+          const titleLink = $('a[href*="/jobs/"]', card).first();
+          const href = titleLink.attr('href') || '';
+          if (!href.includes('--')) return;
 
-        const parentSection = $(el).closest('div, article, section');
-        const sectionText = parentSection.text() || $(el).parent().text() || '';
+          const jobUrl = href.startsWith('http') ? href : `https://jobvacancies.ng${href}`;
+          const title = titleLink.text().trim();
+          if (!title || title.length < 3) return;
 
-        const companyMatch = sectionText.match(/(?:at|@)\s+([A-Za-z0-9&.\s-]+?)(?:\s*[,–—]|\s*\n|$)/i);
-        const companyName = companyMatch ? companyMatch[1].trim() : null;
+          const companyLink = $('a[href*="/company/"]', card).first();
+          const companyName = companyLink.text().trim() || null;
 
-        const locationMatch = sectionText.match(/(Lagos|Abuja|Ibadan|Port Harcourt|Enugu|Kano|Kaduna|Ogun|Rivers|Delta|Oyo|Anambra|Remote|On-site)/i);
-        const location = locationMatch ? locationMatch[1] : null;
+          const cardText = $(card).text();
 
-        const isRemote = /\bRemote\b/i.test(sectionText);
+          const isRemote = /\bRemote\b/i.test(cardText);
 
-        const dateMatch = sectionText.match(/(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i) ||
-                          sectionText.match(/(?:Today|Yesterday|\d+\s+(?:days?|hours?)\s+ago)/i);
-        const datePosted = dateMatch ? this.parseDate(dateMatch[0]) : null;
+          const locationMatch = cardText.match(/(?:Location|Lagos|Abuja|Ibadan|Port Harcourt|Enugu|Kano|Kaduna|Ogun|Rivers|Delta|Oyo|Anambra)/i);
+          const location = locationMatch ? locationMatch[0] : null;
 
-        if (input.searchTerm) {
-          const term = input.searchTerm.toLowerCase();
-          const allText = (title + ' ' + sectionText).toLowerCase();
-          const terms = term.split(/\s+OR\s+/).map(t => t.trim().replace(/^"(.*)"$/, '$1'));
-          const matches = terms.some(t => allText.includes(t.toLowerCase()));
-          if (!matches) return;
-        }
+          const agoMatch = cardText.match(/(Today|Yesterday|\d+\s+(?:days?|hours?)\s+ago)/i);
+          const datePosted = agoMatch ? this.parseDate(agoMatch[0]) : null;
 
-        jobs.push(new JobPostDto({
-          id: `ngjobvac-${Buffer.from(jobUrl).toString('base64url').slice(0, 40)}`,
-          title,
-          companyName,
-          jobUrl,
-          location: new LocationDto({ city: location }),
-          description: sectionText.slice(0, 1000),
-          datePosted,
-          isRemote,
-          site: Site.NGJOBVACANCIES,
-        }));
-      });
-    } catch (err: any) {
-      this.logger.error(`JobVacanciesNG error: ${err.message}`);
+          const description = $('p.text-muted.line-clamp-3', card).first().text().trim() || null;
+
+          if (input.searchTerm) {
+            const term = input.searchTerm.toLowerCase();
+            const allText = (title + ' ' + (companyName || '') + ' ' + (description || '')).toLowerCase();
+            const terms = term.split(/\s+OR\s+/).map(t => t.trim().replace(/^"(.*)"$/, '$1'));
+            const matches = terms.some(t => allText.includes(t.toLowerCase()));
+            if (!matches) return;
+          }
+
+          pageJobs.push(new JobPostDto({
+            id: `ngjobvac-${Buffer.from(jobUrl).toString('base64url').slice(0, 40)}`,
+            title,
+            companyName,
+            jobUrl,
+            location: location ? new LocationDto({ city: location }) : undefined,
+            description: description ? description.slice(0, 1000) : undefined,
+            datePosted,
+            isRemote,
+            site: Site.NGJOBVACANCIES,
+          }));
+        });
+
+        jobs.push(...pageJobs);
+
+        const hasNext = $('a[rel="next"], a:contains("Next")').length > 0;
+        if (!hasNext) break;
+      } catch (err: any) {
+        this.logger.error(`JobVacanciesNG error page ${page}: ${err.message}`);
+        break;
+      }
     }
 
     return new JobResponseDto(jobs.slice(0, resultsWanted));

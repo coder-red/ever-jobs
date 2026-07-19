@@ -12,9 +12,13 @@ import { LlmRankerService } from './rankers/llm-ranker.service';
 import { CollatedJobsStore, CollatedJobRow } from './store/collated-jobs.store';
 
 function isWithinHoursOld(datePosted: string | undefined | null, hoursOld: number): boolean {
-  if (!datePosted) return false;
+  // Many direct-employer boards (RemoteOK, Remotive, Wellfound, ATS feeds) omit
+  // a post date. Rejecting undated jobs silently dropped whole boards (119
+  // fetched -> 0 matched), leaving only recruiter-heavy dated boards. Keep
+  // undated/unparseable jobs; only reject when we KNOW a job is too old.
+  if (!datePosted) return true;
   const posted = new Date(datePosted).getTime();
-  if (isNaN(posted)) return false;
+  if (isNaN(posted)) return true;
   return Date.now() - posted <= hoursOld * 60 * 60 * 1000;
 }
 
@@ -59,7 +63,7 @@ export class CollectorService {
       'COLLECTOR_SEARCH_TERM',
       DEFAULT_SEARCH_TERM,
     );
-    const hoursOld = Number(this.config.get('COLLECTOR_HOURS_OLD', 72));
+    const hoursOld = Number(this.config.get('COLLECTOR_HOURS_OLD', 168));
     const resultsWanted = Number(this.config.get('COLLECTOR_RESULTS_WANTED', 100));
     const allowHybrid =
       this.config.get<string>('COLLECTOR_ALLOW_HYBRID', 'false') === 'true';

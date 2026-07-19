@@ -70,6 +70,22 @@ export function matchesAiRole(title: string): boolean {
   return AI_PATTERN.test(title);
 }
 
+// Engineering-flavoured job word — pairs with an AI/ML signal to accept real
+// AI/ML *building* roles (AI Developer, MLOps Engineer, NLP Engineer, etc.)
+// without the strict word-adjacency AI_PATTERN demands.
+const ENGINEER_WORD =
+  /\b(engineer|engineering|engr|developer|programmer|mlops|ml\s*ops|software\s+dev)\b/i;
+
+/**
+ * Broader "AI/ML engineer-type role" test for international boards: an AI/ML
+ * signal AND an engineering word anywhere in the text (or a bare "MLE"). This
+ * captures direct-employer titles the strict AI_PATTERN was silently dropping.
+ */
+export function matchesAiEngineerRole(text: string): boolean {
+  if (/\bmle\b/i.test(text)) return true;
+  return AI_BROAD.test(text) && ENGINEER_WORD.test(text);
+}
+
 export function matchesJuniorLevel(title: string): boolean {
   return JUNIOR_PATTERN.test(title);
 }
@@ -231,8 +247,9 @@ export function matchesAiMlRemoteRole(
     return HIRING_SIGNAL.test(text) || matchesAiRole(titleOnly);
   }
 
-  // International branch — strict AI/ML Engineer persona.
-  const isAiRole = matchesAiRole(titleOnly) || matchesAiRole(blob);
+  // International branch — AI/ML engineer-type roles.
+  const isAiRole =
+    matchesAiEngineerRole(titleOnly) || matchesAiEngineerRole(blob);
   if (!isAiRole) return false;
 
   // Reject scientist/researcher/co-founder/trainer/participant — not Engineer roles

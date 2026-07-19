@@ -373,6 +373,34 @@ describe('persona.filter', () => {
     });
   });
 
+  describe('broadened direct AI/ML engineer roles (international)', () => {
+    const usLoc = { city: 'Austin', state: 'TX', country: 'US' } as JobPostDto['location'];
+    const remote = (title: string) =>
+      matchesAiMlRemoteRole(baseJob({ title, isRemote: true, companyName: 'Acme', location: usLoc }));
+
+    it('accepts real direct AI/ML build titles the strict pattern missed', () => {
+      for (const t of [
+        'AI Developer',
+        'MLOps Engineer',
+        'Deep Learning Engineer',
+        'NLP Engineer',
+        'Machine Learning Engineer',
+        'Computer Vision Engineer',
+        'LLM Engineer',
+        'AI/ML Software Developer',
+      ]) {
+        expect(remote(t)).toBe(true);
+      }
+    });
+
+    it('still rejects non-engineering AI roles internationally', () => {
+      expect(remote('AI Product Manager')).toBe(false);
+      expect(remote('AI Recruiter')).toBe(false);
+      expect(remote('Data Scientist')).toBe(false);
+      expect(remote('Machine Learning Researcher')).toBe(false);
+    });
+  });
+
   describe('isZeroExpFriendly', () => {
     it('passes null/empty description', () => {
       expect(isZeroExpFriendly(null)).toBe(true);
