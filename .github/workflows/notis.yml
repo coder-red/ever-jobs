@@ -1,9 +1,9 @@
 name: Job Notifier (Telegram)
 
 on:
-  schedule:
-    # Every 30 min. GHA cron is best-effort and can run 5-15 min late during peaks.
-    - cron: '*/30 * * * *'
+  # schedule:                # DISABLED — jobradar replaces this
+  #   # Every 30 min. GHA cron is best-effort and can run 5-15 min late during peaks.
+  #   - cron: '*/30 * * * *'
   workflow_dispatch:        # manual trigger from the Actions tab
 
 concurrency:
