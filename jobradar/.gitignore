@@ -1,0 +1,4 @@
+# State lives on the `data` branch, written by the workflow — never in source.
+data/
+node_modules/
+*.log

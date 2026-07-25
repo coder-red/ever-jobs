@@ -1,0 +1,25 @@
+{
+  "sources": [
+    "remoteok",
+    "remotive",
+    "himalayas",
+    "jobicy",
+    "arbeitnow",
+    "weworkremotely",
+    "workingnomads",
+    "ats",
+    "hotnigerianjobs",
+    "myjobmag",
+    "jobberman"
+  ],
+  "minScoreIntl": 45,
+  "minScoreNg": 50,
+  "maxAgeDays": 30,
+  "maxNotificationsPerRun": 15,
+  "telegramDelayMs": 1200,
+  "envPath": "../apps/notifier/.env",
+  "legacyNotifiedPath": "../data/notified.json",
+  "minScoreAgency": 45,
+  "maxAgenciesPerRun": 2,
+  "agencyCooldownDays": 30
+}
